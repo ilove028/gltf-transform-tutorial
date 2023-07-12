@@ -1,6 +1,7 @@
-import { Document, Accessor, TextureInfo } from "@gltf-transform/core";
-import { joinPrimitives, transformPrimitive } from "@gltf-transform/functions";
+import { Document, Accessor } from "@gltf-transform/core";
+import { joinPrimitives, transformPrimitive, simplifyPrimitive } from "@gltf-transform/functions";
 import { createCanvas } from "canvas";
+import { MeshoptSimplifier } from "meshoptimizer"; 
 
 const VertexAttributeSemantic = {
   /**
@@ -236,6 +237,8 @@ const merge = async (document, createTextCoord = false) => {
   const mergedPrimitive = joinPrimitives(canMergePrimitives.map((p) => {
     const primitive = newDocument.createPrimitive();
 
+    // weldPrimitive(document, p, {tolerance: 0.01});
+    p = simplifyPrimitive(document, p, { simplifier: MeshoptSimplifier, ratio: 0.1, error: 0.01 })
     p.listSemantics().forEach((semantic) => {
       const accessor = p.getAttribute(semantic);
 

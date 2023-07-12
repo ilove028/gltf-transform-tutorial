@@ -5,12 +5,14 @@ specifiers:
   '@gltf-transform/extensions': ^3.4.2
   '@gltf-transform/functions': ^3.4.2
   canvas: ^2.11.2
+  meshoptimizer: ^0.19.0
 
 dependencies:
   '@gltf-transform/core': 3.4.2
   '@gltf-transform/extensions': 3.4.2
   '@gltf-transform/functions': 3.4.2
   canvas: 2.11.2
+  meshoptimizer: 0.19.0
 
 packages:
 
@@ -472,6 +474,10 @@ packages:
     engines: {node: '>=8'}
     dependencies:
       semver: 6.3.1
+    dev: false
+
+  /meshoptimizer/0.19.0:
+    resolution: {integrity: sha512-58qz5Qc/6Geu8Ib3bBWERE5R7pM5ErrJVo16fAtu6ryxVaE3VAtM/u2vurDxaq8AGZ3yWxuM/DnylTga5a4XCQ==}
     dev: false
 
   /mime-db/1.52.0:
