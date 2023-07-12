@@ -111,7 +111,6 @@ const createPng = (datas) => {
     
     // return canvas.toDataURL();
     const buffer = canvas.toBuffer();
-    console.log(buffer);
     return new Uint8Array(buffer);
   } else {
     throw new Error("Context not exist")
