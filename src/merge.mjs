@@ -201,15 +201,13 @@ const merge = async (document, createTextCoord = false) => {
       newDocument.createTexture()
         .setImage(
           createPng(new Uint8Array(
-            new Array(nodes.length * 4)
+            new Array(primitiveIndex * 4)
               .fill(0)
               .map((_, index) => {
-                // TODO 这里node对应一个Primitive 存在问题
-                const base = Math.floor(index / 4);
-                const mesh = nodes[base].getMesh();
-                
-                if (mesh) {
-                  const primitive = mesh.listPrimitives()[0];
+                if (true) {
+                  // const primitive = mesh.listPrimitives()[0];
+                  // TODO 这里直接用 canMergePrimitives 不一定真确.
+                  const primitive = primitives[Math.floor(index / 4)];
                   const baseColorFactor = primitive.getMaterial()?.getBaseColorFactor();
                   
                   if (baseColorFactor) {
