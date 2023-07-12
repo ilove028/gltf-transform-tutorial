@@ -1,4 +1,4 @@
-import { Document, Accessor } from "@gltf-transform/core";
+import { Document, Accessor, TextureInfo } from "@gltf-transform/core";
 import { joinPrimitives, transformPrimitive } from "@gltf-transform/functions";
 import { createCanvas } from "canvas";
 
@@ -176,7 +176,7 @@ const merge = async (document, createTextCoord = false) => {
                   new Array(2 * vertexCount)
                     .fill(0)
                     .map((_, index) => {
-                      return index % 2 === 0 ? (rowIndex + 0.5) * step : (colunmIndex + 0.5) * step
+                      return index % 2 === 1 ? (rowIndex + 0.5) * step : (colunmIndex + 0.5) * step
                     })
                 ))
                 .setType(Accessor.Type.VEC2)
@@ -204,24 +204,22 @@ const merge = async (document, createTextCoord = false) => {
             new Array(primitiveIndex * 4)
               .fill(0)
               .map((_, index) => {
-                if (true) {
-                  // const primitive = mesh.listPrimitives()[0];
-                  // TODO 这里直接用 canMergePrimitives 不一定真确.
-                  const primitive = primitives[Math.floor(index / 4)];
-                  const baseColorFactor = primitive.getMaterial()?.getBaseColorFactor();
-                  
-                  if (baseColorFactor) {
-                    if (index % 4 === 0) {
-                      return colorFloat2Byte(baseColorFactor[0]);
-                    } else if (index % 4 === 1) {
-                      return colorFloat2Byte(baseColorFactor[1]);
-                    } else if (index % 4 === 2) {
-                      return colorFloat2Byte(baseColorFactor[2]);
-                    } else {
-                      return colorFloat2Byte(baseColorFactor[3]);
-                    }
+                const primitive = primitives[Math.floor(index / 4)];
+                const baseColorFactor = primitive.getMaterial()?.getBaseColorFactor();
+                
+                if (baseColorFactor) {
+                  if (index % 4 === 0) {
+                    return colorFloat2Byte(baseColorFactor[0]);
+                    // return 255;
+                  } else if (index % 4 === 1) {
+                    // return 0;
+                    return colorFloat2Byte(baseColorFactor[1]);
+                  } else if (index % 4 === 2) {
+                    // return 0;
+                    return colorFloat2Byte(baseColorFactor[2]);
                   } else {
-                    return 0;
+                    // return 255;
+                    return colorFloat2Byte(baseColorFactor[3]);
                   }
                 } else {
                   return 0;
@@ -230,7 +228,10 @@ const merge = async (document, createTextCoord = false) => {
           ))
         )
         .setMimeType("'image/png")
-    );
+    )
+    // .getBaseColorTextureInfo()
+    // .setMagFilter(TextureInfo.MagFilter.NEAREST)
+    // .setMinFilter(TextureInfo.MinFilter.NEAREST)
   const cache = [];
   const mergedPrimitive = joinPrimitives(canMergePrimitives.map((p) => {
     const primitive = newDocument.createPrimitive();
