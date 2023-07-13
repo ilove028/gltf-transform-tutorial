@@ -3,5 +3,7 @@ import { quadtree } from "./spatialDivision.mjs";
 
 (async () => {
   const io = new NodeIO();
-  quadtree(await io.read("./public/ship-attr.gltf"), 10000)
+  const cell = quadtree(await io.read("./public/ship-attr.gltf"), 100000);
+
+  console.log(cell);
 })()

@@ -16,6 +16,65 @@ class Cell {
     this.children = children;
     this.contents = contents;
   }
+
+  getMaxLevel() {
+    return this.children
+      ? Math.max(...this.children.map(c => c.getMaxLevel()))
+      : this.level;
+  }
+
+  getCount() {
+    return this.children
+      ? this.children.reduce((pre, c) => {
+        pre += c.getCount();
+
+        return pre;
+      }, 0)
+      : 1
+  }
+
+  /**
+   * 得到该节点下最大的顶点数
+   */
+  getMaxVertexCount() {
+    return this.children
+      ? Math.max(...this.children.map(c => c.getMaxVertexCount()))
+      : this.contents 
+        ? getNodesVertexCount(this.contents)
+        : 0
+  }
+
+  /**
+   * 得到该节点下最大的顶点数
+   */
+  getMinVertexCount() {
+    return this.children
+      ? Math.min(...this.children.map(c => c.getMaxVertexCount()))
+      : this.contents 
+        ? getNodesVertexCount(this.contents)
+        : 0
+  }
+}
+
+const getNodeVertexCount = (node) => {
+  const mesh = node.getMesh();
+  
+  if (mesh) {
+    return mesh.listPrimitives().reduce((pre, cur) => {
+      pre += cur.getAttribute(VertexAttributeSemantic.POSITION).getCount();
+
+      return pre;
+    }, 0)
+  } else {
+    return 0;
+  }
+}
+const getNodesVertexCount = (nodes) => {
+  return nodes.reduce((count, node) => {
+    count += getNodeVertexCount(node);
+
+    return count;
+  }, 0)
 }
 
 const quadtree = (document, maxVertexCount = 300000, axis) => {
@@ -122,26 +181,7 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
 
     return (aBbx.min[axis] + aBbx.max[axis]) / 2 - (bBbx.min[axis] + bBbx.max[axis]) / 2
   })
-  const getNodeVertexCount = (node) => {
-    const mesh = node.getMesh();
-    
-    if (mesh) {
-      return mesh.listPrimitives().reduce((pre, cur) => {
-        pre += cur.getAttribute(VertexAttributeSemantic.POSITION).getCount();
-
-        return pre;
-      }, 0)
-    } else {
-      return 0;
-    }
-  }
-  const getNodesVertexCount = (nodes) => {
-    return nodes.reduce((count, node) => {
-      count += getNodeVertexCount(node);
-
-      return count;
-    }, 0)
-  }
+  
   const getNodesBBox = (nodes) => {
     let bbox = getBounds(nodes[0]);
 
@@ -240,9 +280,7 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
   }
   
   // 这里简单通过数组判空来对应 axis
-  const cell = divide(new Cell(bbox), [nodeListX, nodeListY, nodeListZ].filter(l => l.length > 0), vertexCount);
-
-  console.log(cell);
+  return divide(new Cell(bbox), [nodeListX, nodeListY, nodeListZ].filter(l => l.length > 0), vertexCount);
 }
 
 export {
