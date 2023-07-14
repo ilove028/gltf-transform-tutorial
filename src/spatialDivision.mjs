@@ -82,15 +82,18 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
     if (vertexCount > maxVertexCount && nodeListList[0].length > 1) {
       // 顶点没有达到划分条件或者还有超过一个的节点nodeListList 是一个二维数组
       const midIndex0 = findMidIndex(nodeListList[0], vertexCount / 2);
-      const midIndex1 = findMidIndex(nodeListList[1], vertexCount / 2);
       const nodeList0Left = nodeListList[0].slice(0, midIndex0 + 1);
       const nodeList0Right = nodeListList[0].slice(midIndex0 + 1);
-      const nodeList1Left = nodeListList[1].slice(0, midIndex1 + 1);
-      const nodeList1Right = nodeListList[1].slice(midIndex1 + 1);
-      const cell00NodeList = nodeList0Left.filter(n => nodeList1Left.includes(n));
-      const cell10NodeList = nodeList0Right.filter(n => nodeList1Left.includes(n));
-      const cell01NodeList = nodeList0Left.filter(n => nodeList1Right.includes(n));
-      const cell11NodeList = nodeList0Right.filter(n => nodeList1Right.includes(n));
+      const nodeList1InList0Left = nodeListList[1].filter(n => nodeList0Left.includes(n));
+      const nodeList1InList0Right = nodeListList[1].filter(n => nodeList0Right.includes(n));
+      const leftCenterIndex = findMidIndex(nodeList1InList0Left, getNodesVertexCount(nodeList0Left) / 2);
+      const rightCenterIndex = findMidIndex(nodeList1InList0Right, getNodesVertexCount(nodeList0Right) / 2);
+      // const nodeList1Left = nodeListList[1].filter(n => nodeList0Left.includes(n).slice(0, midIndex1 + 1);
+      // const nodeList1Right = nodeListList[1].slice(midIndex1 + 1);
+      const cell00NodeList = nodeList1InList0Left.slice(0, leftCenterIndex + 1);
+      const cell10NodeList = nodeList1InList0Right.slice(0, rightCenterIndex + 1);
+      const cell01NodeList = nodeList1InList0Left.slice(leftCenterIndex + 1);
+      const cell11NodeList = nodeList1InList0Right.slice(rightCenterIndex + 1);
       let cell00 = null;
       let cell10 = null;
       let cell01 = null;
@@ -107,8 +110,8 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
         divide(
           cell00,
           [
-            nodeList0Left.filter(n => cell00NodeList.includes(n)),
-            nodeList1Left.filter(n => cell00NodeList.includes(n))
+            nodeListList[0].filter(n => cell00NodeList.includes(n)),
+            nodeListList[1].filter(n => cell00NodeList.includes(n))
           ],
           getNodesVertexCount(cell00NodeList)
         )
@@ -125,8 +128,8 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
         divide(
           cell10,
           [
-            nodeList0Right.filter(n => cell10NodeList.includes(n)),
-            nodeList1Left.filter(n => cell10NodeList.includes(n))
+            nodeListList[0].filter(n => cell10NodeList.includes(n)),
+            nodeListList[1].filter(n => cell10NodeList.includes(n))
           ],
           getNodesVertexCount(cell10NodeList)
         )
@@ -143,8 +146,8 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
         divide(
           cell01,
           [
-            nodeList0Left.filter(n => cell01NodeList.includes(n)),
-            nodeList1Right.filter(n => cell01NodeList.includes(n))
+            nodeListList[0].filter(n => cell01NodeList.includes(n)),
+            nodeListList[1].filter(n => cell01NodeList.includes(n))
           ],
           getNodesVertexCount(cell01NodeList)
         )
@@ -161,8 +164,8 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
         divide(
           cell11,
           [
-            nodeList0Right.filter(n => cell11NodeList.includes(n)),
-            nodeList1Right.filter(n => cell11NodeList.includes(n))
+            nodeListList[0].filter(n => cell11NodeList.includes(n)),
+            nodeListList[1].filter(n => cell11NodeList.includes(n))
           ],
           getNodesVertexCount(cell11NodeList)
         )
