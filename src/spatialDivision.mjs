@@ -23,14 +23,13 @@ class Cell {
       : this.level;
   }
 
-  getCount() {
-    return this.children
-      ? this.children.reduce((pre, c) => {
-        pre += c.getCount();
+  getCount(hasContent = false) {
+    return (this.children || [])
+      .reduce((pre, c) => {
+        pre += c.getCount(hasContent);
 
         return pre;
-      }, 0)
-      : 1
+      }, hasContent ? (this.contents ? 1 : 0) : 1)
   }
 
   /**
@@ -53,6 +52,19 @@ class Cell {
       : this.contents 
         ? getNodesVertexCount(this.contents)
         : 0
+  }
+
+  /**
+   * 得到该Cell下(包含该Cell)全部的顶点数
+   * @returns 
+   */
+  getVertexCount() {
+    return (this.children || [])
+      .reduce((pre, c) => {
+        pre += c.getVertexCount();
+
+        return pre;
+      }, this.contents ? getNodesVertexCount(this.contents) : 0)
   }
 }
 
@@ -236,7 +248,7 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
       }
     }
   }
-  const scene = document.getRoot().getDefaultScene();
+  const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
   const bbox = getBounds(scene);
   const xRange = bbox.max[0] - bbox.min[0];
   const yRange = bbox.max[1] - bbox.min[1];

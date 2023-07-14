@@ -3,7 +3,15 @@ import { quadtree } from "./spatialDivision.mjs";
 
 (async () => {
   const io = new NodeIO();
-  const cell = quadtree(await io.read("./public/ship-attr.gltf"), 100000);
+  const cell = quadtree(await io.read("./public/ship-attr.gltf"), 10000);
 
-  console.log(cell);
+  console.log(
+    `Level ${cell.getMaxLevel()}\n`,
+    `Cell count ${cell.getCount()}\n`,
+    `Cell has content count ${cell.getCount(true)}\n`,
+    `VertexCount ${cell.getVertexCount()}\n`,
+    `MaxVertexCount ${cell.getMaxVertexCount()}\n`,
+    `MinVertexCount ${cell.getMinVertexCount()}\n`,
+    // JSON.stringify(cell)
+  );
 })()
