@@ -1,4 +1,7 @@
+import { NodeIO, Document } from "@gltf-transform/core";
+import { createTransform, prune } from "@gltf-transform/functions"
 import { VertexAttributeSemantic } from "./constant.mjs";
+import path from "path";
 
 const getNodeVertexCount = (node) => {
   const mesh = node.getMesh();
@@ -85,8 +88,114 @@ const create3dtiles = (cell) => {
   return tileset;
 }
 
+const pruneMaterial = (compareFn) => {
+  const materials = [];
+  return createTransform("pruneMaterial", async (document) => {
+    document.getRoot().listMeshes().forEach((mesh) => {
+      mesh.listPrimitives().forEach((primitive) => {
+        const material = primitive.getMaterial();
+        const likeMaterial = materials.find(m => compareFn(m, material));
+        if (likeMaterial) {
+          if (likeMaterial !== material) {
+            primitive.setMaterial(likeMaterial);
+          }
+        } else {
+          materials.push(material)
+        }
+      });
+    });
+  })
+}
+
+const create3dtilesContent = async (filePath, document, cell, extension = "glb") => {
+  const io = new NodeIO();
+  const materialMap = new WeakMap();
+  const createDocument = (nodes) => {
+    if (nodes) {
+      const newDocument = new Document();
+      const buffer = newDocument.createBuffer();
+      const scene = newDocument.createScene()
+
+      nodes && nodes.forEach((node) => {
+        const primitives = node.getMesh().listPrimitives();
+        const mesh = newDocument.createMesh();
+
+        primitives.forEach((primitive) => {
+          const newPrimitive = newDocument.createPrimitive();
+          const oldMaterial = primitive.getMaterial();
+          const indeiceAccessor = primitive.getIndices();
+
+          indeiceAccessor && newPrimitive.setIndices(
+            newDocument.createAccessor()
+              .setArray(indeiceAccessor.getArray())
+              .setType(indeiceAccessor.getType())
+          )
+
+          primitive.listSemantics().forEach((semantic) => {
+            const oldAccessor = primitive.getAttribute(semantic);
+
+            newPrimitive.setAttribute(
+              semantic,
+              newDocument.createAccessor()
+                .setArray(oldAccessor.getArray())
+                .setType(oldAccessor.getType())
+                .setBuffer(buffer)
+            )
+          })
+
+          let existMaterial = materialMap.get(oldMaterial);
+
+          // if (!existMaterial) {
+          //   existMaterial = newDocument.createMaterial().setBaseColorFactor(oldMaterial.getBaseColorFactor());
+          //   materialMap.set(oldMaterial, existMaterial);
+          // }
+          newPrimitive.setMaterial(newDocument.createMaterial().setBaseColorFactor(oldMaterial.getBaseColorFactor()))
+
+          mesh.addPrimitive(newPrimitive);
+
+        })
+        scene.addChild(
+          newDocument.createNode()
+            .setExtras(node.getExtras())
+            .setMatrix(node.getMatrix())
+            .setMesh(mesh)
+        )
+      });
+
+      return newDocument;
+    }
+  }
+
+  const write = async (filePath, document, cell) => {
+    const doc = createDocument(cell.contents);
+
+    if (doc) {
+      await doc.transform(
+        pruneMaterial((existMaterial, material) => {
+          const a = existMaterial.getBaseColorFactor();
+          const b = material.getBaseColorFactor();
+          
+          return Math.abs(a[0] - b[0]) < 0.01
+            && Math.abs(a[1] - b[1]) < 0.01
+            && Math.abs(a[2] - b[2]) < 0.01
+            && a[3] === b[3]
+        }),
+        prune()
+      );
+      await io.write(path.join(filePath, `${cell.level}-${cell.x}-${cell.y}.${extension}`), doc);
+    }
+    for (let i = 0; cell.children && i < cell.children.length; i++) {
+      await write(filePath, document, cell.children[i]);
+    }
+  }
+
+  await write(filePath, document, cell);
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
-  create3dtiles
+  create3dtiles,
+  create3dtilesContent,
+  pruneMaterial
 }
