@@ -1,5 +1,6 @@
 import { NodeIO } from "@gltf-transform/core";
 import { quadtree } from "./spatialDivision.mjs";
+import { create3dtiles } from "./utils.mjs";
 
 (async () => {
   const io = new NodeIO();
@@ -14,4 +15,5 @@ import { quadtree } from "./spatialDivision.mjs";
     `MinVertexCount ${cell.getMinVertexCount()}\n`,
     // JSON.stringify(cell)
   );
+  console.log(JSON.stringify(create3dtiles(cell)))
 })()
