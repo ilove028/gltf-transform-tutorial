@@ -13,7 +13,7 @@ import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
       'meshopt.decoder': MeshoptDecoder,
       'meshopt.encoder': MeshoptEncoder,
   });
-  const document = await io.read("./public/ship-attr.gltf");
+  const document = await io.read("./public/04010100400000000000000000000000.glb");
 
   await document.transform(
     reorder({encoder: MeshoptEncoder}),
@@ -24,5 +24,5 @@ import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
   document.createExtension(EXTMeshoptCompression)
       .setRequired(true)
       .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
-  await io.write("./public/meshopt/ship-attr.glb", document);
+  await io.write("./public/meshopt/04010100400000000000000000000000.glb", document);
 })()
