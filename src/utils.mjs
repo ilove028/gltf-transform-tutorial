@@ -1,5 +1,7 @@
 import { NodeIO, Document } from "@gltf-transform/core";
-import { createTransform, prune } from "@gltf-transform/functions"
+import { createTransform, prune, reorder, quantize } from "@gltf-transform/functions";
+import { EXTMeshoptCompression } from '@gltf-transform/extensions';
+import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
 import { VertexAttributeSemantic } from "./constant.mjs";
 import path from "path";
 
@@ -108,7 +110,12 @@ const pruneMaterial = (compareFn) => {
 }
 
 const create3dtilesContent = async (filePath, document, cell, extension = "glb") => {
-  const io = new NodeIO();
+  const io = new NodeIO()
+  .registerExtensions([EXTMeshoptCompression])
+  .registerDependencies({
+      'meshopt.decoder': MeshoptDecoder,
+      'meshopt.encoder': MeshoptEncoder,
+  });
   const materialMap = new WeakMap();
   const createDocument = (nodes) => {
     if (nodes) {
@@ -180,8 +187,15 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
             && Math.abs(a[2] - b[2]) < 0.01
             && a[3] === b[3]
         }),
-        prune()
+        prune(),
+        reorder({encoder: MeshoptEncoder}),
+        quantize({
+          pattern: /^(POSITION|NORMAL)(_\d+)?$/
+        })
       );
+      doc.createExtension(EXTMeshoptCompression)
+        .setRequired(true)
+        .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
       await io.write(path.join(filePath, `${cell.level}-${cell.x}-${cell.y}.${extension}`), doc);
     }
     for (let i = 0; cell.children && i < cell.children.length; i++) {

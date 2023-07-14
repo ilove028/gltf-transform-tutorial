@@ -23,7 +23,7 @@ const run = async (input, output) => {
     prune()
   );
 
-  const cell = quadtree(document, 100000);
+  const cell = quadtree(document, 300000);
 
   console.log(
     `Level ${cell.getMaxLevel()}\n`,
@@ -36,7 +36,7 @@ const run = async (input, output) => {
   );
   await writeFile(path.join(output, "tileset.json"), JSON.stringify(create3dtiles(cell), null, 2));
 
-  await create3dtilesContent(output, document, cell, "gltf");
+  await create3dtilesContent(output, document, cell, "glb");
 }
 
-run("./public/ship-attr.gltf", "./public/3dtiles/ship/");
+run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/");
