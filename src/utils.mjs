@@ -29,26 +29,44 @@ const getNodesVertexCount = (nodes) => {
 
 const getTileSetSphere = (cell) => {
   const { bbox: { min, max } } = cell;
+  const center = middle(min, max);
   return [
-    (min[0] + max[0]) / 2,
-    (min[1] + max[1]) / 2,
-    (min[2] + max[2]) / 2,
-    Math.sqrt(
-      Math.pow(max[0] - min[0], 2),
-      Math.pow(max[1] - min[1], 2),
-      Math.pow(max[2] - min[2], 2)
-    )
+    ...center,
+    distance(center, max)
   ]
 }
 
+/**
+ * 计算两点中点
+ * @param {*} a 
+ * @param {*} b 
+ * @returns 
+ */
+const middle = (a, b) => {
+  return [
+    (a[0] + b[0]) / 2,
+    (a[1] + b[1]) / 2,
+    (a[2] + b[2]) / 2
+  ]
+}
+
+/**
+ * 计算两点之间距离
+ * @param {*} a 
+ * @param {*} b 
+ * @returns 
+ */
+const distance = (a, b) => Math.sqrt(
+  (a[0] - b[0]) * (a[0] - b[0])
+  + (a[1] - b[1]) * (a[1] - b[1])
+  + (a[2] - b[2]) * (a[2] - b[2])
+)
+
 const getGeometricError = (cell) => {
   const { bbox: { min, max } } = cell;
-
-  return Math.sqrt(
-    Math.pow(max[0] - min[0], 2),
-    Math.pow(max[1] - min[1], 2),
-    Math.pow(max[2] - min[2], 2)
-  )
+  const center = middle(min, max);
+  
+  return distance(center, max);
 }
 
 const create3dtiles = (cell) => {
@@ -189,9 +207,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
         }),
         prune(),
         reorder({encoder: MeshoptEncoder}),
-        quantize({
-          pattern: /^(POSITION|NORMAL)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型 GLTF模型展示不匹配
-        })
+        // quantize({
+        //   pattern: /^(POSITION|NORMAL)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型 GLTF模型展示不匹配
+        // })
       );
       doc.createExtension(EXTMeshoptCompression)
         .setRequired(true)
