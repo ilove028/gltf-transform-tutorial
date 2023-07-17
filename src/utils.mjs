@@ -190,7 +190,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
         prune(),
         reorder({encoder: MeshoptEncoder}),
         quantize({
-          pattern: /^(NORMAL)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球不匹配
+          pattern: /^(POSITION|NORMAL)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型 GLTF模型展示不匹配
         })
       );
       doc.createExtension(EXTMeshoptCompression)
