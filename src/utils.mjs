@@ -165,6 +165,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
                 .setArray(oldAccessor.getArray())
                 .setType(oldAccessor.getType())
                 .setBuffer(buffer)
+                .setNormalized(semantic === VertexAttributeSemantic.NORMAL)
             )
           })
 
@@ -208,7 +209,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
         prune(),
         reorder({encoder: MeshoptEncoder}),
         // quantize({
-        //   pattern: /^(POSITION|NORMAL)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型 GLTF模型展示不匹配
+        //   pattern: /^(POSITION)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型渲染暂时没有问题 GLTF模型展示不匹配 NORMAL会造成渲染不对
         // })
       );
       doc.createExtension(EXTMeshoptCompression)
