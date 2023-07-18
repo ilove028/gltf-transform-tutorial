@@ -1,5 +1,5 @@
 import { NodeIO, Document } from "@gltf-transform/core";
-import { createTransform, prune, reorder, quantize } from "@gltf-transform/functions";
+import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives } from "@gltf-transform/functions";
 import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
 import { VertexAttributeSemantic } from "./constant.mjs";
@@ -134,8 +134,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       'meshopt.decoder': MeshoptDecoder,
       'meshopt.encoder': MeshoptEncoder,
   });
-  const materialMap = new WeakMap();
   const createDocument = (nodes) => {
+    const materialMap = new Map();
     if (nodes) {
       const newDocument = new Document();
       const buffer = newDocument.createBuffer();
@@ -143,9 +143,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
 
       nodes && nodes.forEach((node) => {
         const primitives = node.getMesh().listPrimitives();
-        const mesh = newDocument.createMesh();
 
         primitives.forEach((primitive) => {
+          transformPrimitive(primitive, node.getWorldMatrix());
           const newPrimitive = newDocument.createPrimitive();
           const oldMaterial = primitive.getMaterial();
           const indeiceAccessor = primitive.getIndices();
@@ -157,37 +157,53 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
           )
 
           primitive.listSemantics().forEach((semantic) => {
-            const oldAccessor = primitive.getAttribute(semantic);
+            if (semantic === VertexAttributeSemantic.POSITION || semantic === VertexAttributeSemantic.NORMAL) {
+              const oldAccessor = primitive.getAttribute(semantic);
 
-            newPrimitive.setAttribute(
-              semantic,
-              newDocument.createAccessor()
-                .setArray(oldAccessor.getArray())
-                .setType(oldAccessor.getType())
-                .setBuffer(buffer)
-                .setNormalized(semantic === VertexAttributeSemantic.NORMAL)
-            )
+              newPrimitive.setAttribute(
+                semantic,
+                newDocument.createAccessor()
+                  .setArray(oldAccessor.getArray())
+                  .setType(oldAccessor.getType())
+                  .setBuffer(buffer)
+                  .setNormalized(semantic === VertexAttributeSemantic.NORMAL)
+              )
+            } else {
+              console.error(`${semantic} attribute not handle.`)
+            }
           })
 
-          let existMaterial = materialMap.get(oldMaterial);
+          let existMaterial;
+          let existMesh;
+          materialMap.forEach((mesh, m) => {
+            if (!existMaterial && isMaterialLike(m, oldMaterial)) {
+              existMaterial = m;
+              existMesh = mesh;
+            }
+          });
 
-          // if (!existMaterial) {
-          //   existMaterial = newDocument.createMaterial().setBaseColorFactor(oldMaterial.getBaseColorFactor());
-          //   materialMap.set(oldMaterial, existMaterial);
-          // }
-          newPrimitive.setMaterial(newDocument.createMaterial().setBaseColorFactor(oldMaterial.getBaseColorFactor()))
-
-          mesh.addPrimitive(newPrimitive);
-
+          if (!existMesh) {
+            existMaterial = newDocument.createMaterial().setBaseColorFactor(oldMaterial.getBaseColorFactor());
+            existMesh = newDocument.createMesh();
+            materialMap.set(existMaterial, existMesh);
+          }
+          newPrimitive.setMaterial(existMaterial)
+          existMesh.addPrimitive(newPrimitive);
         })
+      });
+
+      materialMap.forEach((mesh) => {
+        const mergedPrimitive = joinPrimitives(mesh.listPrimitives());
+
+        mesh.listPrimitives().forEach(p => p.dispose());
+        mesh.addPrimitive(mergedPrimitive);
         scene.addChild(
           newDocument.createNode()
-            .setExtras(node.getExtras())
-            .setMatrix(node.getMatrix())
+            // .setExtras(node.getExtras())
+            // .setMatrix(node.getMatrix())
             .setMesh(mesh)
         )
       });
-
       return newDocument;
     }
   }
@@ -197,15 +213,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
 
     if (doc) {
       await doc.transform(
-        pruneMaterial((existMaterial, material) => {
-          const a = existMaterial.getBaseColorFactor();
-          const b = material.getBaseColorFactor();
-          
-          return Math.abs(a[0] - b[0]) < 0.01
-            && Math.abs(a[1] - b[1]) < 0.01
-            && Math.abs(a[2] - b[2]) < 0.01
-            && a[3] === b[3]
-        }),
+        pruneMaterial(isMaterialLike),
         prune(),
         reorder({encoder: MeshoptEncoder}),
         // quantize({
@@ -225,10 +233,21 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
   await write(filePath, document, cell);
 }
 
+const isMaterialLike = (aMaterial, bMaterial) => {
+  const a = aMaterial.getBaseColorFactor();
+  const b = bMaterial.getBaseColorFactor();
+  
+  return Math.abs(a[0] - b[0]) < 0.01
+    && Math.abs(a[1] - b[1]) < 0.01
+    && Math.abs(a[2] - b[2]) < 0.01
+    && a[3] === b[3]
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
   create3dtiles,
   create3dtilesContent,
-  pruneMaterial
+  pruneMaterial,
+  isMaterialLike
 }
