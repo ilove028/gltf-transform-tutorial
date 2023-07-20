@@ -39,5 +39,5 @@ const run = async (input, output) => {
   await create3dtilesContent(output, document, cell, "glb");
 }
 
-// run("./public/ship-attr.gltf", "./public/3dtiles/ship/");
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/");
+run("./public/ship-attr.gltf", "./public/3dtiles/ship/");
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/");

@@ -1,9 +1,10 @@
-import { NodeIO, Document } from "@gltf-transform/core";
+import path from "path";
+import { NodeIO, Document, Accessor } from "@gltf-transform/core";
 import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives } from "@gltf-transform/functions";
 import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
 import { VertexAttributeSemantic } from "./constant.mjs";
-import path from "path";
+import { EXTMeshFeatures, EXTStructuralMetadata } from "./extensions/index.mjs";
 
 const getNodeVertexCount = (node) => {
   const mesh = node.getMesh();
@@ -129,7 +130,7 @@ const pruneMaterial = (compareFn) => {
 
 const create3dtilesContent = async (filePath, document, cell, extension = "glb") => {
   const io = new NodeIO()
-  .registerExtensions([EXTMeshoptCompression])
+  .registerExtensions([EXTMeshoptCompression, EXTMeshFeatures, EXTStructuralMetadata])
   .registerDependencies({
       'meshopt.decoder': MeshoptDecoder,
       'meshopt.encoder': MeshoptEncoder,
@@ -140,8 +141,11 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       const newDocument = new Document();
       const buffer = newDocument.createBuffer();
       const scene = newDocument.createScene()
+      const meshFeatures = newDocument.createExtension(EXTMeshFeatures);
+      const metadata = newDocument.createExtension(EXTStructuralMetadata);
 
-      nodes && nodes.forEach((node) => {
+      newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata.createMeatdata())
+      nodes && nodes.forEach((node, nodeIndex) => {
         const primitives = node.getMesh().listPrimitives();
 
         primitives.forEach((primitive) => {
@@ -173,6 +177,20 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
             }
           })
 
+          const count = newPrimitive.getAttribute(VertexAttributeSemantic.POSITION).getCount();
+          newPrimitive.setAttribute(
+            `${VertexAttributeSemantic.FEATURE_ID}_0`,
+            newDocument.createAccessor()
+              .setArray(
+                // https://github.com/CesiumGS/glTF/tree/3d-tiles-next/extensions/2.0/Vendor/EXT_mesh_features 大小限制
+                nodes.length < Math.pow(2, 16)
+                ? new Uint16Array(Array(count).fill(nodeIndex))
+                : new Float32Array(Array(count).fill(nodeIndex))
+              )
+              .setType(Accessor.Type.SCALAR)
+              .setBuffer(buffer)
+          );
+
           let existMaterial;
           let existMesh;
           materialMap.forEach((mesh, m) => {
@@ -187,15 +205,17 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
             existMesh = newDocument.createMesh();
             materialMap.set(existMaterial, existMesh);
           }
-          newPrimitive.setMaterial(existMaterial)
+          newPrimitive.setMaterial(existMaterial);
           existMesh.addPrimitive(newPrimitive);
         })
       });
 
       materialMap.forEach((mesh) => {
-        const mergedPrimitive = joinPrimitives(mesh.listPrimitives());
+        const primitives = mesh.listPrimitives();
+        const mergedPrimitive = joinPrimitives(primitives);
 
-        mesh.listPrimitives().forEach(p => p.dispose());
+        mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
+        primitives.forEach(p => p.dispose());
         mesh.addPrimitive(mergedPrimitive);
         scene.addChild(
           newDocument.createNode()
@@ -204,6 +224,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
             .setMesh(mesh)
         )
       });
+
+      metadata.writeSchema(filePath);
       return newDocument;
     }
   }
