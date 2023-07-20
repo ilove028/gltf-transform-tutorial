@@ -5,7 +5,7 @@ import { create3dtiles, pruneMaterial, create3dtilesContent } from "./utils.mjs"
 import { writeFile } from "fs/promises";
 import path from "path";
 
-const run = async (input, output) => {
+const run = async (input, output, extension = "glb") => {
   const io = new NodeIO();
   const document = await io.read(input);
   
@@ -34,10 +34,10 @@ const run = async (input, output) => {
     `MinVertexCount ${cell.getMinVertexCount()}\n`,
     // JSON.stringify(cell)
   );
-  await writeFile(path.join(output, "tileset.json"), JSON.stringify(create3dtiles(cell), null, 2));
+  await writeFile(path.join(output, "tileset.json"), JSON.stringify(create3dtiles(cell, extension), null, 2));
 
-  await create3dtilesContent(output, document, cell, "glb");
+  await create3dtilesContent(output, document, cell, extension);
 }
 
-run("./public/ship-attr.gltf", "./public/3dtiles/ship/");
+run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf");
 // run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/");

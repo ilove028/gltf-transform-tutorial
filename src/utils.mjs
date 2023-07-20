@@ -70,7 +70,7 @@ const getGeometricError = (cell) => {
   return distance(center, max);
 }
 
-const create3dtiles = (cell) => {
+const create3dtiles = (cell, extension) => {
   const tileset = {
     asset: {
       version: "1.1"
@@ -93,7 +93,7 @@ const create3dtiles = (cell) => {
 
     if (cell.contents) {
       result.content = {
-        uri: `${cell.level}-${cell.x}-${cell.y}.glb`
+        uri: `${cell.level}-${cell.x}-${cell.y}.${extension}`
       }
     }
 
@@ -130,7 +130,7 @@ const pruneMaterial = (compareFn) => {
 
 const create3dtilesContent = async (filePath, document, cell, extension = "glb") => {
   const io = new NodeIO()
-  .registerExtensions([EXTMeshoptCompression, EXTMeshFeatures, EXTStructuralMetadata])
+  .registerExtensions([EXTMeshoptCompression, EXTMeshFeatures])
   .registerDependencies({
       'meshopt.decoder': MeshoptDecoder,
       'meshopt.encoder': MeshoptEncoder,
@@ -142,9 +142,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       const buffer = newDocument.createBuffer();
       const scene = newDocument.createScene()
       const meshFeatures = newDocument.createExtension(EXTMeshFeatures);
-      const metadata = newDocument.createExtension(EXTStructuralMetadata);
+      // const metadata = newDocument.createExtension(EXTStructuralMetadata);
 
-      newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata.createMeatdata())
+      // newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata.createMeatdata())
       nodes && nodes.forEach((node, nodeIndex) => {
         const primitives = node.getMesh().listPrimitives();
 
@@ -225,7 +225,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
         )
       });
 
-      metadata.writeSchema(filePath);
+      // metadata.writeSchema(filePath);
       return newDocument;
     }
   }
