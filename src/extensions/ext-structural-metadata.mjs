@@ -42,7 +42,7 @@ export class EXTStructuralMetadata extends Extension {
           entity: {
             name: "Entity info.",
             properties: {
-              id: {
+              uuid: {
                 type: "SCALAR",
                 componentType: "UINT16",
                 required: true
@@ -76,7 +76,7 @@ export class EXTStructuralMetadata extends Extension {
             class: "entity",
             count: extension.getCount(),
             properties: {
-              id: {
+              uuid: {
                 values: bufferViewDefIndex
               }
             }
@@ -89,7 +89,7 @@ export class EXTStructuralMetadata extends Extension {
       //   })
       // })
 
-      const buffer = Buffer.from(new Uint16Array(extension.items.map(item => item.id)).buffer);
+      const buffer = Buffer.from(new Uint16Array(extension.items.map(item => item.uuid)).buffer);
       rootDef.buffers.push({
         uri: `data:application/gltf-buffer;base64,${buffer.toString('base64')}`,
         byteLength: buffer.byteLength
