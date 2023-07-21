@@ -40,4 +40,4 @@ const run = async (input, output, extension = "glb") => {
 }
 
 run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf");
-// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/");
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "gltf");

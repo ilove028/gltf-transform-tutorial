@@ -130,7 +130,7 @@ const pruneMaterial = (compareFn) => {
 
 const create3dtilesContent = async (filePath, document, cell, extension = "glb") => {
   const io = new NodeIO()
-  .registerExtensions([EXTMeshoptCompression, EXTMeshFeatures])
+  .registerExtensions([EXTMeshoptCompression, EXTMeshFeatures, EXTStructuralMetadata])
   .registerDependencies({
       'meshopt.decoder': MeshoptDecoder,
       'meshopt.encoder': MeshoptEncoder,
@@ -142,9 +142,10 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       const buffer = newDocument.createBuffer();
       const scene = newDocument.createScene()
       const meshFeatures = newDocument.createExtension(EXTMeshFeatures);
-      // const metadata = newDocument.createExtension(EXTStructuralMetadata);
+      const metadataExt = newDocument.createExtension(EXTStructuralMetadata);
+      const metadata = metadataExt.createMeatdata();
 
-      // newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata.createMeatdata())
+      newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata);
       nodes && nodes.forEach((node, nodeIndex) => {
         const primitives = node.getMesh().listPrimitives();
 
@@ -208,6 +209,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
           newPrimitive.setMaterial(existMaterial);
           existMesh.addPrimitive(newPrimitive);
         })
+
+        metadata.addItem({ id: document.getRoot().listNodes().findIndex(n => n === node) });
       });
 
       materialMap.forEach((mesh) => {
@@ -225,7 +228,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
         )
       });
 
-      // metadata.writeSchema(filePath);
+      metadataExt.writeSchema(filePath);
       return newDocument;
     }
   }

@@ -50,7 +50,8 @@ export class EXTMeshFeatures extends Extension {
             primitiveDef.extensions[EXTMeshFeatures.EXTENSION_NAME] = {
               featureIds: [{
                 featureCount: features.featureCount,
-                attribute: features.attribute
+                attribute: features.attribute,
+                propertyTable: 0
               }]
             };
           }

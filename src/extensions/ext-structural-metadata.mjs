@@ -1,6 +1,7 @@
 import { writeFile } from "fs/promises";
 import path from "path";
 import { Extension, ExtensionProperty, PropertyType } from "@gltf-transform/core";
+import { EXTMeshFeatures } from "./ext-mesh-features.mjs";
 
 export const EXT_STRUCTURAL_METADATA = "EXT_structural_metadata";
 
@@ -41,8 +42,10 @@ export class EXTStructuralMetadata extends Extension {
           entity: {
             name: "Entity info.",
             properties: {
-              iid: {
-                type: "string"
+              id: {
+                type: "SCALAR",
+                componentType: "UINT16",
+                required: true
               }
             }
           }
@@ -62,22 +65,40 @@ export class EXTStructuralMetadata extends Extension {
 
     if (extension) {
       const rootDef = context.jsonDoc.json;
+      const bufferViewDefIndex = rootDef.bufferViews.length;
+      const bufferIndex = rootDef.buffers.length;
       rootDef.extensions = rootDef.extensions || {};
       rootDef.extensions[EXTStructuralMetadata.EXTENSION_NAME] = {
         schemaUri: "schema.json",
-        // propertyTables: [
-        //   {
-        //     name: "entity_2023_7_19",
-        //     class: "entity",
-        //     count: extension.getCount(),
-        //     properties: {
-        //       iid: {
-        //         values: 1
-        //       }
-        //     }
-        //   }
-        // ]
+        propertyTables: [
+          {
+            name: "entity_2023_7_19",
+            class: "entity",
+            count: extension.getCount(),
+            properties: {
+              id: {
+                values: bufferViewDefIndex
+              }
+            }
+          }
+        ]
       }
+      // rootDef.meshes && rootDef.meshes.forEach((mesh) => {
+      //   mesh.primitives && mesh.primitives.forEach((primitive) => {
+      //     if (primitive.extensions && primitive.extensions[EXTMeshFeatures.EXTENSION_NAME])
+      //   })
+      // })
+
+      const buffer = Buffer.from(new Uint16Array(extension.items.map(item => item.id)).buffer);
+      rootDef.buffers.push({
+        uri: `data:application/gltf-buffer;base64,${buffer.toString('base64')}`,
+        byteLength: buffer.byteLength
+      })
+      rootDef.bufferViews.push({
+        buffer: bufferIndex,
+        byteOffset: 0,
+        byteLength: buffer.byteLength
+      })
     }
   }
 }
