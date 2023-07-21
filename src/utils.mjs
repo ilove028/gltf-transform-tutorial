@@ -210,7 +210,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
           existMesh.addPrimitive(newPrimitive);
         })
 
-        metadata.addItem({ uuid: document.getRoot().listNodes().findIndex(n => n === node) });
+        const extras = node.getExtras();
+        metadata.addItem({ iid: extras && extras.iid ? extras.iid : null });
       });
 
       materialMap.forEach((mesh) => {

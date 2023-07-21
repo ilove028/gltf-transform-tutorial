@@ -42,9 +42,8 @@ export class EXTStructuralMetadata extends Extension {
           entity: {
             name: "Entity info.",
             properties: {
-              uuid: {
-                type: "SCALAR",
-                componentType: "UINT16",
+              iid: {
+                type: "STRING",
                 required: true
               }
             }
@@ -76,8 +75,9 @@ export class EXTStructuralMetadata extends Extension {
             class: "entity",
             count: extension.getCount(),
             properties: {
-              uuid: {
-                values: bufferViewDefIndex
+              iid: {
+                values: bufferViewDefIndex,
+                stringOffsets: bufferViewDefIndex + 1
               }
             }
           }
@@ -88,8 +88,19 @@ export class EXTStructuralMetadata extends Extension {
       //     if (primitive.extensions && primitive.extensions[EXTMeshFeatures.EXTENSION_NAME])
       //   })
       // })
+      const stringBuffers = extension.items.reduce((pre, item) => {
+        pre.push(Buffer.from(item.iid === null || item.iid === undefined ? "" : `${item.iid}`));
+        return pre;
+      }, []);
+      const stringOffsets = Buffer.from(
+        new Uint32Array(stringBuffers.reduce((pre, buf) => {
+          const last = pre[pre.length - 1];
 
-      const buffer = Buffer.from(new Uint16Array(extension.items.map(item => item.uuid)).buffer);
+          pre.push(last + buf.byteLength);
+          return pre;
+        }, [0])).buffer
+      );
+      const buffer = Buffer.concat(stringBuffers.concat(stringOffsets));
       rootDef.buffers.push({
         uri: `data:application/gltf-buffer;base64,${buffer.toString('base64')}`,
         byteLength: buffer.byteLength
@@ -97,7 +108,12 @@ export class EXTStructuralMetadata extends Extension {
       rootDef.bufferViews.push({
         buffer: bufferIndex,
         byteOffset: 0,
-        byteLength: buffer.byteLength
+        byteLength: buffer.byteLength - stringOffsets.byteLength
+      });
+      rootDef.bufferViews.push({
+        buffer: bufferIndex,
+        byteOffset: buffer.byteLength - stringOffsets.byteLength,
+        byteLength: stringOffsets.byteLength
       })
     }
   }
