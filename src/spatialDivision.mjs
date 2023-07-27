@@ -1,6 +1,6 @@
 import { getBounds } from "@gltf-transform/core";
-import { getNodesVertexCount, getNodeVertexCount } from "./utils.mjs"
-import Cell from "./Cell.mjs";
+import { getNodesVertexCount, getNodeVertexCount, isBboxContain } from "./utils.mjs"
+import Cell, { Cell3 } from "./Cell.mjs";
 
 const AXIS = {
   X: 0,
@@ -8,7 +8,7 @@ const AXIS = {
   Z: 2
 }
 
-const quadtree = (document, maxVertexCount = 300000, axis) => {
+const noUniformQuadtree = (document, maxVertexCount = 300000, axis) => {
   const divide = (cell, nodeListList, vertexCount) => {
     if (vertexCount > maxVertexCount && nodeListList[0].length > 1) {
       // 顶点没有达到划分条件或者还有超过一个的节点nodeListList 是一个二维数组
@@ -216,8 +216,371 @@ const quadtree = (document, maxVertexCount = 300000, axis) => {
   // 这里简单通过数组判空来对应 axis
   return divide(new Cell(bbox), [nodeListX, nodeListY, nodeListZ].filter(l => l.length > 0), vertexCount);
 }
+const isCellContainsNode = (cell, node) => isBboxContain(cell.bbox, getBounds(node))
+
+const getSceneDescendant = (scene, hasMesh = false) => {
+  const result = [];
+
+  scene.traverse((node) => {
+    if (hasMesh && node.getMesh()) {
+      result.push(node);
+    } else {
+      result.push(node);
+    }
+  })
+  return result;
+}
+
+const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infinity, maxNodeSize: 1, axis: undefined }) =>{
+  const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
+  const bbox = getBounds(scene);
+  const xRange = bbox.max[0] - bbox.min[0];
+  const yRange = bbox.max[1] - bbox.min[1];
+  const zRange = bbox.max[2] - bbox.min[2];
+  const divideCell = (cell, axis) => {
+    const { bbox: { min, max } } = cell;
+    const middles = [
+      (min[0] + max[0]) / 2,
+      (min[1] + max[1]) / 2,
+      (min[2] + max[2]) / 2
+    ];
+
+    let cell00;
+    if (axis === 0) {
+      cell00 = new Cell(
+        {
+          min: [min[0], min[1], min[2]],
+          max: [max[0], middles[1], middles[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 0
+      )
+    } else if (axis === 1) {
+      cell00 = new Cell(
+        {
+          min: [min[0], min[1], min[2]],
+          max: [middles[0], max[1], middles[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 0
+      )
+    } else {
+      cell00 = new Cell(
+        {
+          min: [min[0], min[1], min[2]],
+          max: [middles[0], middles[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 0
+      )
+    }
+
+    let cell10;
+    if (axis === 0) {
+      cell10 = new Cell(
+        {
+          min: [min[0], middles[1], min[2]],
+          max: [max[0], max[1], middles[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 0
+      )
+    } else if(axis === 1) {
+      cell10 = new Cell(
+        {
+          min: [middles[0], min[1], min[2]],
+          max: [max[0], max[1], middles[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 0
+      )
+    } else {
+      cell10 = new Cell(
+        {
+          min: [middles[0], min[1], min[2]],
+          max: [max[0], middles[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 0
+      )
+    }
+
+    let cell01;
+    if (axis === 0) {
+      cell01 = new Cell(
+        {
+          min: [min[0], min[1], middles[2]],
+          max: [max[0], middles[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 1
+      )
+    } else if (axis === 1) {
+      cell01 = new Cell(
+        {
+          min: [min[0], min[1], middles[2]],
+          max: [middles[0], max[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 1
+      )
+    } else {
+      cell01 = new Cell(
+        {
+          min: [min[0], middles[1], min[2]],
+          max: [middles[0], max[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 1
+      )
+    }
+
+    let cell11;
+    if (axis === 0) {
+      cell11 = new Cell(
+        {
+          min: [min[0], middles[1], middles[2]],
+          max: [max[0], max[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 1
+      )
+    } else if (axis === 1) {
+      cell11 = new Cell(
+        {
+          min: [middles[0], min[1], middles[2]],
+          max: [max[0], max[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 1
+      )
+    } else {
+      cell11 = new Cell(
+        {
+          min: [middles[0], middles[1], min[2]],
+          max: [max[0], max[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 1
+      )
+    }
+
+    return [cell00, cell10, cell01, cell11];
+  }
+  
+  if (typeof axis !== "number") {
+    let min = Infinity;
+    [xRange, yRange, zRange].forEach((val, index) => {
+      if (val <= min) {
+        axis = index;
+        min = val;
+      }
+    });
+  }
+
+  const divide = (cell, axis, nodes) => {
+    if (nodes && nodes.length > maxNodeSize && cell.level < maxLevel) {
+      // 可以持续划分
+      const childrenCells = divideCell(cell, axis);
+      const childrenNodes = [
+        [],
+        [],
+        [],
+        []
+      ];
+
+      while (nodes.length > 0) {
+        let isChildCellContains = false;
+        const node = nodes.pop();
+        
+        // node是否可以划分进下一级
+        for (let i = 0; i < childrenCells.length; i++) {
+          const cell = childrenCells[i];
+          if (isCellContainsNode(cell, node)) {
+            isChildCellContains = true;
+            childrenNodes[i].push(node);
+            break;
+          }
+        }
+        // 不能划分为下一级作为当前节点Contents
+        if (!isChildCellContains) {
+          (cell.contents || (cell.contents = [])).push(node);
+        }
+      }
+
+      childrenCells.forEach((cell, i) => {
+        divide(cell, axis, childrenNodes[i]);
+      });
+
+      cell.children = childrenCells;
+    } else if (nodes && nodes.length > 0) {
+      cell.contents = nodes;
+    }
+
+    return cell;
+  }
+  
+  return divide(new Cell(bbox), axis, getSceneDescendant(scene, true));
+}
+
+const octree = (document, { maxLevel, maxNodeSize } = { maxLevel: Infinity, maxNodeSize: 1 }) => {
+  const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
+  const bbox = getBounds(scene);
+  const divideCell = (cell) => {
+    const { bbox: { min, max } } = cell;
+    const middles = [
+      (min[0] + max[0]) / 2,
+      (min[1] + max[1]) / 2,
+      (min[2] + max[2]) / 2
+    ];
+
+    return [
+      new Cell3(
+        {
+          min: [...min],
+          max: [...middles]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 0,
+        cell.z * 2 + 0
+      ),
+      new Cell3(
+        {
+          min: [middles[0], min[1], min[2]],
+          max: [max[0], middles[1], middles[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 0,
+        cell.z * 2 + 0
+      ),
+      new Cell3(
+        {
+          min: [min[0], middles[1], min[2]],
+          max: [middles[0], max[1], middles[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 1,
+        cell.z * 2 + 0
+      ),
+      new Cell3(
+        {
+          min: [middles[0], middles[1], min[2]],
+          max: [max[0], max[1], middles[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 1,
+        cell.z * 2 + 0
+      ),
+      new Cell3(
+        {
+          min: [min[0], min[1], middles[2]],
+          max: [middles[0], middles[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 0,
+        cell.z * 2 + 1
+      ),
+      new Cell3(
+        {
+          min: [middles[0], min[1], middles[2]],
+          max: [max[0], middles[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 0,
+        cell.z * 2 + 1
+      ),
+      new Cell3(
+        {
+          min: [min[0], middles[1], middles[2]],
+          max: [middles[0], max[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 0,
+        cell.y * 2 + 1,
+        cell.z * 2 + 1
+      ),
+      new Cell3(
+        {
+          min: [middles[0], middles[1], middles[2]],
+          max: [max[0], max[1], max[2]]
+        },
+        cell.level + 1,
+        cell.x * 2 + 1,
+        cell.y * 2 + 1,
+        cell.z * 2 + 1
+      )
+    ]
+  }
+  const divide = (cell, nodes) => {
+    if (nodes && nodes.length > maxNodeSize && cell.level < maxLevel) {
+      // 可以持续划分
+      const childrenCells = divideCell(cell);
+      const childrenNodes = [
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        []
+      ];
+
+      while (nodes.length > 0) {
+        let isChildCellContains = false;
+        const node = nodes.pop();
+        
+        // node是否可以划分进下一级
+        for (let i = 0; i < childrenCells.length; i++) {
+          const cell = childrenCells[i];
+          if (isCellContainsNode(cell, node)) {
+            isChildCellContains = true;
+            childrenNodes[i].push(node);
+            break;
+          }
+        }
+        // 不能划分为下一级作为当前节点Contents
+        if (!isChildCellContains) {
+          (cell.contents || (cell.contents = [])).push(node);
+        }
+      }
+
+      childrenCells.forEach((cell, i) => {
+        divide(cell, childrenNodes[i]);
+      });
+
+      cell.children = childrenCells;
+    } else if (nodes && nodes.length > 0) {
+      cell.contents = nodes;
+    }
+
+    return cell;
+  }
+
+  return divide(new Cell3(bbox), getSceneDescendant(scene, true));
+}
 
 export {
   AXIS,
-  quadtree
+  noUniformQuadtree,
+  quadtree,
+  octree
 }

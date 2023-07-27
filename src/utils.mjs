@@ -5,6 +5,7 @@ import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
 import { VertexAttributeSemantic } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata } from "./extensions/index.mjs";
+import { Cell3 } from "./Cell.mjs";
 
 const getNodeVertexCount = (node) => {
   const mesh = node.getMesh();
@@ -28,13 +29,43 @@ const getNodesVertexCount = (nodes) => {
   }, 0)
 }
 
-const getTileSetSphere = (cell) => {
+const getTileSphere = (cell) => {
   const { bbox: { min, max } } = cell;
   const center = middle(min, max);
   return [
     ...center,
     distance(center, max)
   ]
+}
+
+const getTileBox = (cell) => {
+  const { bbox: { min, max } } = cell;
+  const dx = max[0] - min[0];
+  const dy = max[1] - min[1];
+  const dz = max[2] - min[2];
+
+  const cx = min[0] + dx * 0.5;
+  const cy = min[1] + dy * 0.5;
+  const cz = min[2] + dz * 0.5;
+
+  const hxx = dx * 0.5;
+  const hxy = 0.0;
+  const hxz = 0.0;
+
+  const hyx = 0.0;
+  const hyy = dy * 0.5;
+  const hyz = 0.0;
+
+  const hzx = 0.0;
+  const hzy = 0.0;
+  const hzz = dz * 0.5;
+
+  return [
+    cx, cy, cz, 
+    hxx, hxy, hxz, 
+    hyx, hyy, hyz, 
+    hzx, hzy, hzz
+  ];
 }
 
 /**
@@ -87,13 +118,14 @@ const create3dtiles = (cell, extension) => {
       refine: "ADD",
       geometricError: getGeometricError(cell),
       boundingVolume: {
-        sphere: getTileSetSphere(cell)
+        // sphere: getTileSphere(cell)
+        box: getTileBox(cell)
       }
     }
 
     if (cell.contents) {
       result.content = {
-        uri: `${cell.level}-${cell.x}-${cell.y}.${extension}`
+        uri: `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
       }
     }
 
@@ -249,7 +281,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       doc.createExtension(EXTMeshoptCompression)
         .setRequired(true)
         .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
-      await io.write(path.join(filePath, `${cell.level}-${cell.x}-${cell.y}.${extension}`), doc);
+      await io.write(path.join(filePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`), doc);
     }
     for (let i = 0; cell.children && i < cell.children.length; i++) {
       await write(filePath, document, cell.children[i]);
@@ -269,11 +301,21 @@ const isMaterialLike = (aMaterial, bMaterial) => {
     && a[3] === b[3]
 }
 
+const isBboxContain = (containerBBox, bbox) => {
+  return containerBBox.min[0] <= bbox.min[0]
+    && containerBBox.min[1] <= bbox.min[1]
+    && containerBBox.min[2] <= bbox.min[2]
+    && containerBBox.max[0] >= bbox.max[0]
+    && containerBBox.max[1] >= bbox.max[1]
+    && containerBBox.max[2] >= bbox.max[2]
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
   create3dtiles,
   create3dtilesContent,
   pruneMaterial,
-  isMaterialLike
+  isMaterialLike,
+  isBboxContain
 }

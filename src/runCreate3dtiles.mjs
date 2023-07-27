@@ -1,6 +1,6 @@
 import { NodeIO } from "@gltf-transform/core";
 import { prune, flatten } from "@gltf-transform/functions";
-import { quadtree } from "./spatialDivision.mjs";
+import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
 import { create3dtiles, pruneMaterial, create3dtilesContent } from "./utils.mjs";
 import { writeFile } from "fs/promises";
 import path from "path";
@@ -23,7 +23,9 @@ const run = async (input, output, extension = "glb") => {
     prune()
   );
 
-  const cell = quadtree(document, 300000);
+  // const cell = noUniformQuadtree(document, 100000);
+  // const cell = quadtree(document);
+  const cell = octree(document);
 
   console.log(
     `Level ${cell.getMaxLevel()}\n`,
@@ -40,4 +42,4 @@ const run = async (input, output, extension = "glb") => {
 }
 
 run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf");
-// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "gltf");
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb");

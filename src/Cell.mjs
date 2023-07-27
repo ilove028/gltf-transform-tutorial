@@ -60,3 +60,10 @@ export default class Cell {
       }, this.contents ? getNodesVertexCount(this.contents) : 0)
   }
 }
+
+export class Cell3 extends Cell {
+  constructor(bbox, level = 0, x = 0, y = 0, z = 0, children = null, contents = null) {
+    super(bbox, level, x, y, children, contents);
+    this.z = z;
+  }
+}
