@@ -374,7 +374,7 @@ const writeSubtrees = async (cell, subtreeLevels, filePath) => {
   const run = async (subtreeRoot, subtreeLevels, filePath) => {
     const { tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots } = subtreeRoot.getSubtreeAvailability(subtreeLevels);
     await writeFile(
-      path.join(filePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.subtree`),
+      path.join(filePath, `${subtreeRoot.level}-${subtreeRoot.x}-${subtreeRoot.y}${subtreeRoot instanceof Cell3 ? `-${subtreeRoot.z}` : ""}.subtree`),
       createSubtreeBinary({ tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots })
     );
 
