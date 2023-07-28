@@ -373,6 +373,10 @@ const createSubtreeBinary = ({ tileAvailability, contentAvailability, childSubtr
 const writeSubtrees = async (cell, subtreeLevels, filePath) => {
   const run = async (subtreeRoot, subtreeLevels, filePath) => {
     const { tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots } = subtreeRoot.getSubtreeAvailability(subtreeLevels);
+    // const tileAvailability = Array(73).fill(false).map((v, i) => i === 6 ? true : false);
+    // const contentAvailability = Array(73).fill(false).map((v, i) => i === 6 ? true : false);
+    // const childSubtreeAvailability = Array(512).fill(false);
+    // const subtreeRoots = null;
     await writeFile(
       path.join(filePath, `${subtreeRoot.level}-${subtreeRoot.x}-${subtreeRoot.y}${subtreeRoot instanceof Cell3 ? `-${subtreeRoot.z}` : ""}.subtree`),
       createSubtreeBinary({ tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots })
@@ -422,7 +426,8 @@ const boolArray2Bin = (arr) => {
   const buffer = Buffer.from(new Uint8Array(len + ((8 - len % 8) % 8)));
 
   for (let i = 0; i < len; i++) {
-    const datas = arr.slice(i * 8, i * 8 + 8).concat(Array(8).fill(false)).slice(0, 8);
+    // reverse 0-0-0-0 在高位00000001
+    const datas = arr.slice(i * 8, i * 8 + 8).concat(Array(8).fill(false)).slice(0, 8).reverse();
     
     buffer[i] = datas.reduce((p, v, i) => {
       p += (v ? Math.pow(2, datas.length - i - 1) : 0);
