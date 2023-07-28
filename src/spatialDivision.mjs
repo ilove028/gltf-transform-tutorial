@@ -10,6 +10,7 @@ const AXIS = {
 
 const noUniformQuadtree = (document, maxVertexCount = 300000, axis) => {
   const divide = (cell, nodeListList, vertexCount) => {
+    console.log(`Divide ${cell.level}-${cell.x}-${cell.y}`);
     if (vertexCount > maxVertexCount && nodeListList[0].length > 1) {
       // 顶点没有达到划分条件或者还有超过一个的节点nodeListList 是一个二维数组
       const midIndex0 = findMidIndex(nodeListList[0], vertexCount / 2);
@@ -391,6 +392,7 @@ const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infini
   }
 
   const divide = (cell, axis, nodes) => {
+    console.log(`Divide ${cell.level}-${cell.x}-${cell.y}`);
     if (nodes && nodes.length > maxNodeSize && cell.level < maxLevel) {
       // 可以持续划分
       const childrenCells = divideCell(cell, axis);
@@ -530,6 +532,7 @@ const octree = (document, { maxLevel, maxNodeSize } = { maxLevel: Infinity, maxN
     ]
   }
   const divide = (cell, nodes) => {
+    console.log(`Divide ${cell.level}-${cell.x}-${cell.y}-${cell.z}`);
     if (nodes && nodes.length > maxNodeSize && cell.level < maxLevel) {
       // 可以持续划分
       const childrenCells = divideCell(cell);

@@ -381,7 +381,7 @@ const writeSubtrees = async (cell, subtreeLevels, filePath) => {
       path.join(filePath, `${subtreeRoot.level}-${subtreeRoot.x}-${subtreeRoot.y}${subtreeRoot instanceof Cell3 ? `-${subtreeRoot.z}` : ""}.subtree`),
       createSubtreeBinary({ tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots })
     );
-
+    console.log(`Subtree ${subtreeRoot.level}-${subtreeRoot.x}-${subtreeRoot.y}${subtreeRoot instanceof Cell3 ? `-${subtreeRoot.z}` : ""}.subtree done.`);
     for (let i = 0; subtreeRoots && i < subtreeRoots.length; i++) {
       const root = subtreeRoots[i];
 

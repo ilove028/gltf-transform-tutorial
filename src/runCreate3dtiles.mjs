@@ -28,7 +28,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   const cell = octree(document);
   
   await writeFile(path.join(output, "tileset.json"), JSON.stringify(await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels), null, 2));
-
+  console.log("Tileset done");
   await create3dtilesContent(output, document, cell, extension);
 
   console.log(
@@ -42,5 +42,5 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   );
 }
 
-run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", true, 3);
-// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
+// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", true, 3);
+run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
