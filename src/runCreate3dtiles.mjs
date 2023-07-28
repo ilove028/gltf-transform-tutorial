@@ -5,7 +5,7 @@ import { create3dtiles, pruneMaterial, create3dtilesContent } from "./utils.mjs"
 import { writeFile } from "fs/promises";
 import path from "path";
 
-const run = async (input, output, extension = "glb") => {
+const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3) => {
   const io = new NodeIO();
   const document = await io.read(input);
   
@@ -26,6 +26,10 @@ const run = async (input, output, extension = "glb") => {
   // const cell = noUniformQuadtree(document, 100000);
   // const cell = quadtree(document);
   const cell = octree(document);
+  
+  await writeFile(path.join(output, "tileset.json"), JSON.stringify(await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels), null, 2));
+
+  await create3dtilesContent(output, document, cell, extension);
 
   console.log(
     `Level ${cell.getMaxLevel()}\n`,
@@ -36,10 +40,7 @@ const run = async (input, output, extension = "glb") => {
     `MinVertexCount ${cell.getMinVertexCount()}\n`,
     // JSON.stringify(cell)
   );
-  await writeFile(path.join(output, "tileset.json"), JSON.stringify(create3dtiles(cell, extension), null, 2));
-
-  await create3dtilesContent(output, document, cell, extension);
 }
 
-run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf");
-// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb");
+run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", true, 3);
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);

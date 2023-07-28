@@ -1,10 +1,11 @@
 import path from "path";
+import { writeFile } from "fs/promises";
 import { NodeIO, Document, Accessor } from "@gltf-transform/core";
 import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives } from "@gltf-transform/functions";
 import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
 import { VertexAttributeSemantic } from "./constant.mjs";
-import { EXTMeshFeatures, EXTStructuralMetadata } from "./extensions/index.mjs";
+import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
 
 const getNodeVertexCount = (node) => {
@@ -101,7 +102,7 @@ const getGeometricError = (cell) => {
   return distance(center, max);
 }
 
-const create3dtiles = (cell, extension) => {
+const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subtreeLevels) => {
   const tileset = {
     asset: {
       version: "1.1"
@@ -138,7 +139,9 @@ const create3dtiles = (cell, extension) => {
 
   tileset.root = run(cell);
 
-  return tileset;
+  return useTilesImplicitTiling
+    ? await TilesImplicitTiling.write(tileset, path, cell, subtreeLevels, extension)
+    : tileset;
 }
 
 const pruneMaterial = (compareFn) => {
@@ -310,6 +313,139 @@ const isBboxContain = (containerBBox, bbox) => {
     && containerBBox.max[2] >= bbox.max[2]
 }
 
+const createSubtreeBinary = ({ tileAvailability, contentAvailability, childSubtreeAvailability }) => {
+  const magic = Buffer.from("subt");
+  const version = Buffer.from(new Uint32Array([1]).buffer);
+  const tileAvailabilityBuffer = tileAvailability.some(v => v)
+    ? tileAvailability.some(v => !v)
+      ? boolArray2Bin(tileAvailability)
+      : 1
+    : 0;
+  const contentAvailabilityBuffer = contentAvailability.some(v => v)
+    ? contentAvailability.some(v => !v)
+      ? boolArray2Bin(contentAvailability)
+      : 1
+    : 0;
+  const childSubtreeAvailabilityBuffer = childSubtreeAvailability.some(v => v)
+    ? childSubtreeAvailability.some(v => !v)
+      ? boolArray2Bin(childSubtreeAvailability)
+      : 1
+    : 0;
+  const buffer = Buffer.concat([tileAvailabilityBuffer, contentAvailabilityBuffer, childSubtreeAvailabilityBuffer].filter(v => v instanceof Buffer));
+  const tileAvailabilityBufferView = tileAvailabilityBuffer instanceof Buffer ? { buffer: 0, byteOffset: 0, byteLength: Math.ceil(tileAvailability.length / 8) } : null;
+  const contentAvailabilityBufferView = contentAvailabilityBuffer instanceof Buffer
+    ? {
+        buffer: 0,
+        byteOffset: getBuffersByteLength(tileAvailabilityBuffer),
+        byteLength: Math.ceil(contentAvailability.length / 8)
+      }
+    : null;
+
+  const childSubtreeAvailabilityBufferView = childSubtreeAvailabilityBuffer instanceof Buffer
+    ? {
+        buffer: 0,
+        byteOffset: getBuffersByteLength(tileAvailabilityBuffer, contentAvailabilityBuffer),
+        byteLength: Math.ceil(childSubtreeAvailability.length / 8)
+      }
+    : null;
+  const jsonObj = {
+    buffers: [{ name: "Availability Buffer", byteLength: buffer.byteLength }],
+    bufferViews: [tileAvailabilityBufferView, contentAvailabilityBufferView, childSubtreeAvailabilityBufferView].filter(v => v),
+    tileAvailability: tileAvailabilityBufferView
+      ? { bitstream: 0, availableCount: tileAvailability.filter(v => v).length }
+      : { constant: tileAvailabilityBuffer },
+    contentAvailability: contentAvailabilityBufferView
+      ? [{ bitstream: tileAvailabilityBufferView ? 1 : 0, availableCount: contentAvailability.filter(v => v).length }]
+      : [{ constant: contentAvailabilityBuffer }],
+    childSubtreeAvailability: childSubtreeAvailabilityBufferView
+        ? { bitstream: [tileAvailabilityBufferView, contentAvailabilityBufferView].filter(v => v).length, availableCount: childSubtreeAvailability.filter(v => v).length }
+        : { constant: childSubtreeAvailabilityBuffer }
+  };
+  const json = Buffer.from(JSON.stringify(jsonObj));
+  // The JSON chunk shall be padded with trailing Space chars (0x20)
+  const paddingBuffer = Buffer.from(new Uint8Array(Array((8 - (json.byteLength % 8) % 8)).fill(0x20)));
+  const jsonBuffer = Buffer.concat([json, paddingBuffer]);
+  const jsonByteLen = Buffer.from(new BigUint64Array([BigInt(jsonBuffer.byteLength)]).buffer);
+  const binaryBtyeLen = Buffer.from(new BigUint64Array([BigInt(buffer.byteLength)]).buffer);
+  return Buffer.concat([magic, version, jsonByteLen, binaryBtyeLen, jsonBuffer, buffer]);
+}
+
+const writeSubtrees = async (cell, subtreeLevels, filePath) => {
+  const run = async (subtreeRoot, subtreeLevels, filePath) => {
+    const { tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots } = subtreeRoot.getSubtreeAvailability(subtreeLevels);
+    await writeFile(
+      path.join(filePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.subtree`),
+      createSubtreeBinary({ tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots })
+    );
+
+    for (let i = 0; subtreeRoots && i < subtreeRoots.length; i++) {
+      const root = subtreeRoots[i];
+
+      if (root.getTileAvailability()) {
+        await run(root, subtreeLevels, filePath);
+      }
+    }
+  }
+
+  await run(cell, subtreeLevels, filePath);
+}
+
+/**
+ * tile坐标数组 [x, y] | [x, y, z]
+ * @param {Array<number>} coordinate
+ * @param {number} len
+ * @returns 
+ */
+const tileCoordinate2MortonIndex = (coordinate, len) => {
+  const strArr = coordinate.map((v) => {
+    const str = `${"0".repeat(len)}${v.toString(2)}`;
+
+    return str.substring(str.length - len, str.length);
+  });
+  const motronIndexStr = Array(len)
+    .fill(0)
+    .reduce((pre, _, i) => {
+      pre += strArr.map(s => s[i]).reverse().join("");
+
+      return pre;
+    }, "");
+  
+  return parseInt(motronIndexStr, 2);
+}
+
+/**
+ * 将boolean数组转换成bit数组 true为1 8位0补齐
+ * @param {*} arr 
+ */
+const boolArray2Bin = (arr) => {
+  const len = Math.ceil(arr.length / 8);
+  const buffer = Buffer.from(new Uint8Array(len + ((8 - len % 8) % 8)));
+
+  for (let i = 0; i < len; i++) {
+    const datas = arr.slice(i * 8, i * 8 + 8).concat(Array(8).fill(false)).slice(0, 8);
+    
+    buffer[i] = datas.reduce((p, v, i) => {
+      p += (v ? Math.pow(2, datas.length - i - 1) : 0);
+
+      return p;
+    }, 0)
+  }
+
+  return buffer;
+}
+
+/**
+ * 取得Buffer数组总的字节长度 Buffer可为空
+ * @param {Buffer} buffers 
+ */
+const getBuffersByteLength = (...buffers) => {
+  return buffers.reduce((pre, buf) => {
+    pre += (buf instanceof Buffer ? buf.byteLength : 0);
+
+    return pre;
+  }, 0);
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -317,5 +453,9 @@ export {
   create3dtilesContent,
   pruneMaterial,
   isMaterialLike,
-  isBboxContain
+  isBboxContain,
+  writeSubtrees,
+  tileCoordinate2MortonIndex,
+  boolArray2Bin,
+  getBuffersByteLength
 }

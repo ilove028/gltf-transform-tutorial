@@ -1,4 +1,4 @@
-import { getNodesVertexCount } from "./utils.mjs"
+import { getNodesVertexCount, tileCoordinate2MortonIndex } from "./utils.mjs"
 
 export default class Cell {
   constructor(bbox, level = 0, x = 0, y = 0, children = null, contents = null) {
@@ -59,11 +59,105 @@ export default class Cell {
         return pre;
       }, this.contents ? getNodesVertexCount(this.contents) : 0)
   }
+
+  /**
+   * 内容可用性用于 implicit tiling 写subtree
+   * @returns 
+   */
+  getContentAvailability() {
+    return !!(this.contents && this.contents.length > 0);
+  }
+
+  /**
+   * Tile 可用性
+   * @returns 
+   */
+  getTileAvailability() {
+    return !!(this.getContentAvailability()
+      || this.children && this.children.some(c => c.getTileAvailability()))
+  }
+
+  /**
+   * 取得该节点下 subtreeLevels 层子树可用性, 子树内容 和孩子子树可用性
+   * @param {number} subtreeLevels 
+   */
+  getSubtreeAvailability(subtreeLevels) {
+    const subtreeRoot = this;
+    const n = this instanceof Cell3 ? 8 : 4;
+    const tileAvailability = new Array((Math.pow(n, subtreeLevels) - 1) / (n -1)).fill(false);
+    const contentAvailability = new Array((Math.pow(n, subtreeLevels) - 1) / (n -1)).fill(false);
+    const childSubtreeAvailability = new Array(Math.pow(n, subtreeLevels)).fill(false);
+    const subtreeRoots = [];
+    const run = (cell) => {
+      if (Array.isArray(cell)) {
+        cell.forEach(c => run(c))
+      } else if (cell) {
+        if (cell.getLocalLevel(subtreeRoot) < subtreeLevels) {
+          const localMortonIndex = cell.getLocalMortonIndex(subtreeRoot);
+          const levelOffset = (Math.pow(n, cell.getLocalLevel(subtreeRoot)) - 1) / (n - 1);
+
+          tileAvailability[levelOffset + localMortonIndex] = cell.getTileAvailability();
+          contentAvailability[levelOffset + localMortonIndex] = cell.getContentAvailability();
+
+          cell.children && run(cell.children);
+        } else if (cell.getLocalLevel(subtreeRoot) === subtreeLevels) {
+          const localMortonIndex = cell.getLocalMortonIndex(subtreeRoot);
+
+          childSubtreeAvailability[localMortonIndex] = cell.getTileAvailability();
+          subtreeRoots.push(cell);
+        }
+      }
+    }
+
+    run(this);
+
+    return {
+      tileAvailability,
+      contentAvailability,
+      childSubtreeAvailability,
+      subtreeRoots
+    };
+  }
+
+  /**
+   * 得到全局莫顿编码
+   * @returns 
+   */
+  getGlobalMortonIndex() {
+    return tileCoordinate2MortonIndex([this.x, this.y], this.level + 1)
+  }
+
+  /**
+   * 得到局部莫顿编码
+   */
+  getLocalMortonIndex(relativeCell) {
+    return this.getGlobalMortonIndex() - relativeCell.getGlobalMortonIndex();
+  }
+
+  getLocalLevel(relativeCell) {
+    return this.level - relativeCell.level;
+  }
+
+  getLocalLevelX(relativeCell) {
+    return this.x - relativeCell.x;
+  }
+
+  getLocalLevelY(relativeCell) {
+    return this.y - relativeCell.y;
+  }
 }
 
 export class Cell3 extends Cell {
   constructor(bbox, level = 0, x = 0, y = 0, z = 0, children = null, contents = null) {
     super(bbox, level, x, y, children, contents);
     this.z = z;
+  }
+
+  getGlobalMortonIndex() {
+    return tileCoordinate2MortonIndex([this.x, this.y, this.z], this.level + 1)
+  }
+
+  getLocalLevelZ(relativeCell) {
+    return this.z - relativeCell.z;
   }
 }
