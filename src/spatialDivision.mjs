@@ -566,11 +566,13 @@ const octree = (document, { maxLevel, maxNodeSize } = { maxLevel: Infinity, maxN
         }
       }
 
-      childrenCells.forEach((cell, i) => {
-        divide(cell, childrenNodes[i]);
-      });
-
-      cell.children = childrenCells;
+      if (childrenNodes.some(nodes => nodes.length > 0)) {
+        childrenCells.forEach((cell, i) => {
+          divide(cell, childrenNodes[i]);
+        });
+  
+        cell.children = childrenCells;
+      }
     } else if (nodes && nodes.length > 0) {
       cell.contents = nodes;
     }

@@ -400,7 +400,7 @@ const writeSubtrees = async (cell, subtreeLevels, filePath) => {
  * @param {number} len
  * @returns 
  */
-const tileCoordinate2MortonIndex = (coordinate, len) => {
+const tileCoordinate2MortonIndex = (coordinate, len, toNumber = true) => {
   const strArr = coordinate.map((v) => {
     const str = `${"0".repeat(len)}${v.toString(2)}`;
 
@@ -414,7 +414,7 @@ const tileCoordinate2MortonIndex = (coordinate, len) => {
       return pre;
     }, "");
   
-  return parseInt(motronIndexStr, 2);
+  return toNumber ? parseInt(motronIndexStr, 2) : motronIndexStr;
 }
 
 /**

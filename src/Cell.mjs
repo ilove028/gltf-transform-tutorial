@@ -73,8 +73,9 @@ export default class Cell {
    * @returns 
    */
   getTileAvailability() {
-    return !!(this.getContentAvailability()
-      || this.children && this.children.some(c => c.getTileAvailability()))
+    return !!(this.getContentAvailability() || this.children)
+    // return !!(this.getContentAvailability()
+    //   || this.children && this.children.some(c => c.getTileAvailability()))
   }
 
   /**
@@ -131,7 +132,9 @@ export default class Cell {
    * 得到局部莫顿编码
    */
   getLocalMortonIndex(relativeCell) {
-    return this.getGlobalMortonIndex() - relativeCell.getGlobalMortonIndex();
+    return this.getGlobalMortonIndex() - relativeCell.getGlobalMortonIndex() * Math.pow(2, (this.level - relativeCell.level) * 2);
+    // const local tileCoordinate2MortonIndex([this.x, this.y], this.level + 1, false).substring(tileCoordinate2MortonIndex([relativeCell.x, relativeCell.y], relativeCell.level + 1, false).length)
+
   }
 
   getLocalLevel(relativeCell) {
@@ -151,6 +154,15 @@ export class Cell3 extends Cell {
   constructor(bbox, level = 0, x = 0, y = 0, z = 0, children = null, contents = null) {
     super(bbox, level, x, y, children, contents);
     this.z = z;
+  }
+
+  /**
+   * 得到局部莫顿编码
+   */
+  getLocalMortonIndex(relativeCell) {
+    return this.getGlobalMortonIndex() - relativeCell.getGlobalMortonIndex() * Math.pow(2, (this.level - relativeCell.level) * 3);
+    // const local tileCoordinate2MortonIndex([this.x, this.y], this.level + 1, false).substring(tileCoordinate2MortonIndex([relativeCell.x, relativeCell.y], relativeCell.level + 1, false).length)
+
   }
 
   getGlobalMortonIndex() {
