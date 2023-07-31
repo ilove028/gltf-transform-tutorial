@@ -1,7 +1,7 @@
 import { NodeIO } from "@gltf-transform/core";
 import { prune, flatten } from "@gltf-transform/functions";
 import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
-import { create3dtiles, pruneMaterial, create3dtilesContent } from "./utils.mjs";
+import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount } from "./utils.mjs";
 import { writeFile } from "fs/promises";
 import path from "path";
 
@@ -18,12 +18,26 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     document = docs[0];
 
     for (let i = 1; i < docs.length; i++) {
+      console.log("Before merge", getNodesVertexCount(document.getRoot().listNodes()))
       document = document.merge(docs[i]);
+      console.log("After merge", getNodesVertexCount(document.getRoot().listNodes()))
     }
   } else {
     document = await io.read(input);
   }
   
+  const scenes = document.getRoot().listScenes();
+
+  if (scenes.length > 1) {
+    const scene = scenes[0];
+
+    for (let i = 1; i < scenes.length; i++) {
+      const curScene = scenes[i];
+
+      curScene.listChildren().forEach(node => scene.addChild(node));
+    }
+  }
+
   await document.transform(
     pruneMaterial((existMaterial, material) => {
       const a = existMaterial.getBaseColorFactor();
@@ -59,15 +73,53 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
 
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
 // run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
-run(
-  [
-    // "./public/6-company/01180100100000000000000000000000.glb",
-    "./public/6-company/01180100101000000000000000000000.glb",
-    "./public/6-company/01180100102000000000000000000000.glb",
-    // "./public/6-company/01180100103000000000000000000000.glb"
-  ],
-  "./public/3dtiles/01180100100000000000000000000000/",
-  "glb",
-  true,
-  3
-);
+(async function() {
+  await run(
+    [
+      "./public/6-company/01180100100000000000000000000000.glb",
+      "./public/6-company/01180100101000000000000000000000.glb",
+      "./public/6-company/01180100102000000000000000000000.glb",
+      "./public/6-company/01180100103000000000000000000000.glb"
+    ],
+    "./public/3dtiles/01180100100000000000000000000000/",
+    "glb",
+    true,
+    3
+  );
+  // await run(
+  //   [
+  //     // "./public/6-company/01180100100000000000000000000000.glb",
+  //     "./public/6-company/01180100101000000000000000000000.glb",
+  //     // "./public/6-company/01180100102000000000000000000000.glb",
+  //     // "./public/6-company/01180100103000000000000000000000.glb"
+  //   ],
+  //   "./public/3dtiles/01180100101000000000000000000000/",
+  //   "glb",
+  //   true,
+  //   3
+  // );
+  // await run(
+  //   [
+  //     // "./public/6-company/01180100100000000000000000000000.glb",
+  //     // "./public/6-company/01180100101000000000000000000000.glb",
+  //     "./public/6-company/01180100102000000000000000000000.glb",
+  //     // "./public/6-company/01180100103000000000000000000000.glb"
+  //   ],
+  //   "./public/3dtiles/01180100102000000000000000000000/",
+  //   "glb",
+  //   true,
+  //   3
+  // );
+  // await run(
+  //   [
+  //     // "./public/6-company/01180100100000000000000000000000.glb",
+  //     // "./public/6-company/01180100101000000000000000000000.glb",
+  //     // "./public/6-company/01180100102000000000000000000000.glb",
+  //     "./public/6-company/01180100103000000000000000000000.glb"
+  //   ],
+  //   "./public/3dtiles/01180100103000000000000000000000/",
+  //   "glb",
+  //   true,
+  //   3
+  // );
+})()
