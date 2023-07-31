@@ -1,5 +1,5 @@
 import { getBounds } from "@gltf-transform/core";
-import { getNodesVertexCount, getNodeVertexCount, isBboxContain } from "./utils.mjs"
+import { distance, getNodesVertexCount, getNodeVertexCount, isBboxContain } from "./utils.mjs"
 import Cell, { Cell3 } from "./Cell.mjs";
 
 const AXIS = {
@@ -437,7 +437,7 @@ const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infini
   return divide(new Cell(bbox), axis, getSceneDescendant(scene, true));
 }
 
-const octree = (document, { maxLevel, maxNodeSize } = { maxLevel: Infinity, maxNodeSize: 1 }) => {
+const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount } = { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: 300000 }) => {
   const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
   const bbox = getBounds(scene);
   const divideCell = (cell) => {
@@ -533,7 +533,13 @@ const octree = (document, { maxLevel, maxNodeSize } = { maxLevel: Infinity, maxN
   }
   const divide = (cell, nodes) => {
     console.log(`Divide ${cell.level}-${cell.x}-${cell.y}-${cell.z}`);
-    if (nodes && nodes.length > maxNodeSize && cell.level < maxLevel) {
+    if (
+      nodes
+      && nodes.length > maxNodeSize
+      && cell.level < maxLevel
+      // && distance(cell.bbox.min, cell.bbox.max) > (maxRadius * 2)
+      && getNodesVertexCount(nodes) > maxVertexCount
+    ) {
       // 可以持续划分
       const childrenCells = divideCell(cell);
       const childrenNodes = [

@@ -237,7 +237,11 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
           });
 
           if (!existMesh) {
-            existMaterial = newDocument.createMaterial().setBaseColorFactor(oldMaterial.getBaseColorFactor());
+            existMaterial = newDocument
+              .createMaterial()
+              .setBaseColorFactor(oldMaterial.getBaseColorFactor())
+              .setRoughnessFactor(0.9)
+              .setMetallicFactor(0.3);
             existMesh = newDocument.createMesh();
             materialMap.set(existMaterial, existMesh);
           }
@@ -462,5 +466,6 @@ export {
   writeSubtrees,
   tileCoordinate2MortonIndex,
   boolArray2Bin,
-  getBuffersByteLength
+  getBuffersByteLength,
+  distance
 }

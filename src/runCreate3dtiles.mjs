@@ -7,7 +7,22 @@ import path from "path";
 
 const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3) => {
   const io = new NodeIO();
-  const document = await io.read(input);
+  let document;
+  if (Array.isArray(input)) {
+    const docs = [];
+
+    for (let i = 0; i < input.length; i++) {
+      docs.push(await io.read(input[i]));
+    }
+
+    document = docs[0];
+
+    for (let i = 1; i < docs.length; i++) {
+      document = document.merge(docs[i]);
+    }
+  } else {
+    document = await io.read(input);
+  }
   
   await document.transform(
     pruneMaterial((existMaterial, material) => {
@@ -23,9 +38,9 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     prune()
   );
 
-  // const cell = noUniformQuadtree(document, 100000);
+  const cell = noUniformQuadtree(document, 300000);
   // const cell = quadtree(document);
-  const cell = octree(document);
+  // const cell = octree(document);
   
   await writeFile(path.join(output, "tileset.json"), JSON.stringify(await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels), null, 2));
   console.log("Tileset done");
@@ -42,5 +57,17 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   );
 }
 
-// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", true, 3);
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
+run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
+// run(
+//   [
+//     "./public/6-company/01180100100000000000000000000000.glb",
+//     "./public/6-company/01180100101000000000000000000000.glb",
+//     "./public/6-company/01180100102000000000000000000000.glb",
+//     "./public/6-company/01180100103000000000000000000000.glb"
+//   ],
+//   "./public/3dtiles/01180100100000000000000000000000/",
+//   "glb",
+//   true,
+//   3
+// );
