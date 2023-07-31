@@ -1,6 +1,6 @@
 import path from "path";
 import { writeFile } from "fs/promises";
-import { NodeIO, Document, Accessor } from "@gltf-transform/core";
+import { NodeIO, Document, Accessor, Material } from "@gltf-transform/core";
 import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives } from "@gltf-transform/functions";
 import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
@@ -241,7 +241,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
               .createMaterial()
               .setBaseColorFactor(oldMaterial.getBaseColorFactor())
               .setRoughnessFactor(0.9)
-              .setMetallicFactor(0.3);
+              .setMetallicFactor(0)
+              .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE);
             existMesh = newDocument.createMesh();
             materialMap.set(existMaterial, existMesh);
           }

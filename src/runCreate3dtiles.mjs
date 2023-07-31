@@ -38,9 +38,9 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     prune()
   );
 
-  const cell = noUniformQuadtree(document, 300000);
+  // const cell = noUniformQuadtree(document, 300000);
   // const cell = quadtree(document);
-  // const cell = octree(document);
+  const cell = octree(document);
   
   await writeFile(path.join(output, "tileset.json"), JSON.stringify(await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels), null, 2));
   console.log("Tileset done");
@@ -57,17 +57,17 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   );
 }
 
-run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
+// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
 // run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
-// run(
-//   [
-//     "./public/6-company/01180100100000000000000000000000.glb",
-//     "./public/6-company/01180100101000000000000000000000.glb",
-//     "./public/6-company/01180100102000000000000000000000.glb",
-//     "./public/6-company/01180100103000000000000000000000.glb"
-//   ],
-//   "./public/3dtiles/01180100100000000000000000000000/",
-//   "glb",
-//   true,
-//   3
-// );
+run(
+  [
+    // "./public/6-company/01180100100000000000000000000000.glb",
+    "./public/6-company/01180100101000000000000000000000.glb",
+    "./public/6-company/01180100102000000000000000000000.glb",
+    // "./public/6-company/01180100103000000000000000000000.glb"
+  ],
+  "./public/3dtiles/01180100100000000000000000000000/",
+  "glb",
+  true,
+  3
+);
