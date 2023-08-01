@@ -1,5 +1,6 @@
 import path from "path";
 import { writeFile } from "fs/promises";
+import fse from "fs-extra";
 import { NodeIO, Document, Accessor, Material, getBounds } from "@gltf-transform/core";
 import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives } from "@gltf-transform/functions";
 import { EXTMeshoptCompression } from '@gltf-transform/extensions';
@@ -291,6 +292,11 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
 
         const extras = node.getExtras();
         metadata.addItem({ iid: extras && extras.iid ? extras.iid : null, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
+        if (extras && extras.iid) {
+          const pt = path.join(filePath, "metadata");
+          fse.ensureDir(pt)
+          fse.writeJSONSync(path.join(pt, `${extras.iid}.json`), { box: getBboxBox(getBounds(node)) })
+        }
       });
 
       materialMap.forEach((mesh) => {
