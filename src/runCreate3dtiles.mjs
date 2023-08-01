@@ -82,6 +82,6 @@ await run(
   ],
   "./public/3dtiles/01180100100000000000000000000000/",
   "glb",
-  false,
+  true,
   3
 );
