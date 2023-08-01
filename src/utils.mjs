@@ -240,8 +240,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
             existMaterial = newDocument
               .createMaterial()
               .setBaseColorFactor(oldMaterial.getBaseColorFactor())
-              .setRoughnessFactor(0.9)
-              .setMetallicFactor(0)
+              .setRoughnessFactor(1)
+              .setMetallicFactor(0.2)
               .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE);
             existMesh = newDocument.createMesh();
             materialMap.set(existMaterial, existMesh);
