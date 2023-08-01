@@ -1,7 +1,7 @@
 import { writeFile } from "fs/promises";
 import path from "path";
 import { Extension, ExtensionProperty, PropertyType } from "@gltf-transform/core";
-import { EXTMeshFeatures } from "./ext-mesh-features.mjs";
+import { paddingBuffer } from "../utils.mjs";
 
 export const EXT_STRUCTURAL_METADATA = "EXT_structural_metadata";
 
@@ -45,6 +45,11 @@ export class EXTStructuralMetadata extends Extension {
               iid: {
                 type: "STRING",
                 required: true
+              },
+              primitiveType: {
+                // rs-cesium PrimitiveType Enum定义 Transparent = 0  BigScene = 1 SmallScene = 2 Unknown = 4 这个是这里定义的 rs 没有
+                type: "SCALAR",
+                componentType: "UINT8"
               }
             }
           }
@@ -64,8 +69,10 @@ export class EXTStructuralMetadata extends Extension {
 
     if (extension) {
       const rootDef = context.jsonDoc.json;
-      const bufferViewDefIndex = rootDef.bufferViews.length;
       const bufferIndex = rootDef.buffers.length;
+      const iidBufferViewDefIndex = rootDef.bufferViews.length;
+      const stringOffsetsBufferViewDefIndex = rootDef.bufferViews.length + 1;
+      const primitiveTypeBufferViewDefIndex = rootDef.bufferViews.length + 2; // 这里简单实现 将 primitiveType 分为另一个buffer
       rootDef.extensions = rootDef.extensions || {};
       rootDef.extensions[EXTStructuralMetadata.EXTENSION_NAME] = {
         schemaUri: "schema.json",
@@ -76,8 +83,11 @@ export class EXTStructuralMetadata extends Extension {
             count: extension.getCount(),
             properties: {
               iid: {
-                values: bufferViewDefIndex,
-                stringOffsets: bufferViewDefIndex + 1
+                values: iidBufferViewDefIndex,
+                stringOffsets: stringOffsetsBufferViewDefIndex
+              },
+              primitiveType: {
+                values: primitiveTypeBufferViewDefIndex
               }
             }
           }
@@ -100,7 +110,12 @@ export class EXTStructuralMetadata extends Extension {
           return pre;
         }, [0])).buffer
       );
-      const buffer = Buffer.concat(stringBuffers.concat(stringOffsets));
+      const stringBuffer = Buffer.concat(stringBuffers);
+      const primitiveTypeBuffer = Buffer.from(new Uint8Array(extension.items.map(item => item.primitiveType)).buffer);
+      const stringBufferPadded = paddingBuffer(stringBuffer);
+      const stringOffsetsBufferPadded = paddingBuffer(stringOffsets);
+      // const primitiveTypeBufferPadded = paddingBuffer(primitiveTypeBuffer);
+      const buffer = Buffer.concat([stringBufferPadded, stringOffsetsBufferPadded, primitiveTypeBuffer]);
       rootDef.buffers.push({
         uri: `data:application/gltf-buffer;base64,${buffer.toString('base64')}`,
         byteLength: buffer.byteLength
@@ -108,13 +123,18 @@ export class EXTStructuralMetadata extends Extension {
       rootDef.bufferViews.push({
         buffer: bufferIndex,
         byteOffset: 0,
-        byteLength: buffer.byteLength - stringOffsets.byteLength
+        byteLength: stringBuffer.byteLength
       });
       rootDef.bufferViews.push({
         buffer: bufferIndex,
-        byteOffset: buffer.byteLength - stringOffsets.byteLength,
+        byteOffset: stringBufferPadded.byteLength,
         byteLength: stringOffsets.byteLength
-      })
+      });
+      rootDef.bufferViews.push({
+        buffer: bufferIndex,
+        byteOffset: stringBufferPadded.byteLength + stringOffsetsBufferPadded.byteLength,
+        byteLength: primitiveTypeBuffer.byteLength
+      });
     }
   }
 }

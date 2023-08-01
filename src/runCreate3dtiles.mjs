@@ -52,7 +52,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     prune()
   );
 
-  // const cell = noUniformQuadtree(document, 300000);
+  // const cell = noUniformQuadtree(document, 100000);
   // const cell = quadtree(document);
   const cell = octree(document);
   
@@ -72,7 +72,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
 }
 
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
-// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3);
 await run(
   [
     "./public/6-company/01180100100000000000000000000000.glb",
@@ -82,6 +82,6 @@ await run(
   ],
   "./public/3dtiles/01180100100000000000000000000000/",
   "glb",
-  true,
+  false,
   3
 );

@@ -1,6 +1,6 @@
 import path from "path";
 import { writeFile } from "fs/promises";
-import { NodeIO, Document, Accessor, Material } from "@gltf-transform/core";
+import { NodeIO, Document, Accessor, Material, getBounds } from "@gltf-transform/core";
 import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives } from "@gltf-transform/functions";
 import { EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
@@ -30,8 +30,8 @@ const getNodesVertexCount = (nodes) => {
   }, 0)
 }
 
-const getTileSphere = (cell) => {
-  const { bbox: { min, max } } = cell;
+const getBboxSphere = (bbox) => {
+  const { min, max } = bbox;
   const center = middle(min, max);
   return [
     ...center,
@@ -39,8 +39,8 @@ const getTileSphere = (cell) => {
   ]
 }
 
-const getTileBox = (cell) => {
-  const { bbox: { min, max } } = cell;
+const getBboxBox = (bbox) => {
+  const { min, max } = bbox;
   const dx = max[0] - min[0];
   const dy = max[1] - min[1];
   const dz = max[2] - min[2];
@@ -95,11 +95,42 @@ const distance = (a, b) => Math.sqrt(
   + (a[2] - b[2]) * (a[2] - b[2])
 )
 
-const getGeometricError = (cell) => {
-  const { bbox: { min, max } } = cell;
-  const center = middle(min, max);
-  
-  return distance(center, max);
+const getNodesBounds = (nodes) => {
+  let bbox = nodes && nodes.length > 0 ? getBounds(nodes[0]) : null;
+
+  for (let i = 1; nodes && i < nodes.length; i++) {
+    const { min, max } = getBounds(nodes[i]);
+
+    if (min[0] < bbox.min[0]) {
+      bbox.min[0] = min[0];
+    }
+
+    if (min[1] < bbox.min[1]) {
+      bbox.min[1] = min[1];
+    }
+
+    if (min[2] < bbox.min[2]) {
+      bbox.min[2] = min[2];
+    }
+
+    if (max[0] > bbox.max[0]) {
+      bbox.max[0] = max[0];
+    }
+
+    if (max[1] > bbox.max[1]) {
+      bbox.max[1] = max[1];
+    }
+
+    if (max[2] > bbox.max[2]) {
+      bbox.max[2] = max[2];
+    }
+  }
+
+  return bbox;
+}
+
+const getGeometricError = (bbox) => {
+  return distance(bbox.min, bbox.max);
 }
 
 const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subtreeLevels) => {
@@ -107,26 +138,34 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
     asset: {
       version: "1.1"
     },
-    geometricError: getGeometricError(cell),
+    geometricError: getGeometricError(cell.bbox),
     root: null
   }
 
   const run = (cell) => {
     const children = cell.children
       ? cell.children.map(c => run(c))
-      : null
+      : null;
+    const contentBbox = getNodesBounds(cell.contents);
     const result = {
       refine: "ADD",
-      geometricError: getGeometricError(cell),
+      // TODO 这里 隐式还没在subtree写入 contentVolume 所以在隐式模式下 直接用 tile Volume
+      geometricError: useTilesImplicitTiling ? getGeometricError(cell.bbox) : getGeometricError(contentBbox || cell.bbox),
       boundingVolume: {
         // sphere: getTileSphere(cell)
-        box: getTileBox(cell)
+        box: getBboxBox(cell.bbox)
       }
     }
 
     if (cell.contents) {
       result.content = {
         uri: `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
+      }
+
+      if (contentBbox && !useTilesImplicitTiling) {
+        result.content.boundingVolume = {
+          box: getBboxBox(contentBbox)
+        }
       }
     }
 
@@ -251,7 +290,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
         })
 
         const extras = node.getExtras();
-        metadata.addItem({ iid: extras && extras.iid ? extras.iid : null });
+        metadata.addItem({ iid: extras && extras.iid ? extras.iid : null, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
       });
 
       materialMap.forEach((mesh) => {
@@ -456,6 +495,20 @@ const getBuffersByteLength = (...buffers) => {
   }, 0);
 }
 
+const paddingBuffer = (buffer) => {
+  const byteLength = buffer.byteLength;
+  const modLength = byteLength % 8;
+  if (modLength === 0) {
+    return buffer;
+  } else {
+    const res = Buffer.alloc(byteLength + 8 - modLength);
+
+    buffer.copy(res);
+
+    return res;
+  }
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -468,5 +521,6 @@ export {
   tileCoordinate2MortonIndex,
   boolArray2Bin,
   getBuffersByteLength,
-  distance
+  distance,
+  paddingBuffer
 }
