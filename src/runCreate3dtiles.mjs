@@ -55,8 +55,9 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   // const cell = noUniformQuadtree(document, 100000);
   // const cell = quadtree(document);
   const cell = octree(document);
-  
-  await writeFile(path.join(output, "tileset.json"), JSON.stringify(await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels), null, 2));
+  const tileset = await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels);
+  (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input)
+  await writeFile(path.join(output, "tileset.json"), JSON.stringify(tileset, null, 2));
   console.log("Tileset done");
   await create3dtilesContent(output, document, cell, extension);
 
@@ -69,6 +70,18 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     `MinVertexCount ${cell.getMinVertexCount()}\n`,
     // JSON.stringify(cell)
   );
+}
+
+const extractFileName = (filePaths) => {
+  if (typeof filePaths === "string") {
+    filePaths = [filePaths];
+  }
+
+  return filePaths.map((filePath) => {
+    const matchs = /([_-\w\d]+)(\.([\w\d]+))?$/.exec(filePath);
+
+    return matchs ? matchs[1] : null;
+  })
 }
 
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
