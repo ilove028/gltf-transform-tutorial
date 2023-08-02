@@ -437,7 +437,7 @@ const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infini
   return divide(new Cell(bbox), axis, getSceneDescendant(scene, true));
 }
 
-const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount } = { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: 100000 }) => {
+const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount } = { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: 300000 }) => {
   const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
   const bbox = getBounds(scene);
   const divideCell = (cell) => {
