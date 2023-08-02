@@ -4,10 +4,20 @@ import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
 import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount } from "./utils.mjs";
 import { writeFile } from "fs/promises";
 import path from "path";
+import glMatrix from "gl-matrix";
+
+const { mat4: { create, multiply, invert } } = glMatrix;
+const getRootExtrasMatrix = (document) => {
+  const extras = document.getRoot().getExtras();
+  return extras && extras.matrix
+    ? extras.matrix
+    : create()
+}
 
 const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3) => {
   const io = new NodeIO();
   let document;
+  let mainMatrix;
   if (Array.isArray(input)) {
     const docs = [];
 
@@ -16,11 +26,29 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     }
 
     document = docs[0];
-
+    mainMatrix = getRootExtrasMatrix(document)
     for (let i = 1; i < docs.length; i++) {
-      console.log("Before merge", getNodesVertexCount(document.getRoot().listNodes()))
+      // 对除了主document的其它所有doc的node做变换到 主doc坐标系下 基于已经将多个模型放置好
+      const curMatrix = getRootExtrasMatrix(docs[i]);
+      const mat = multiply(
+        create(),
+        invert(create(), mainMatrix),
+        curMatrix
+      );
+      console.log("Before merge", getNodesVertexCount(document.getRoot().listNodes()));
+      docs[i].getRoot().listNodes().forEach((node) => {
+        const originMat = node.getMatrix();
+
+        node.setMatrix(
+          multiply(
+            create(),
+            mat,
+            originMat
+          )
+        );
+      })
       document = document.merge(docs[i]);
-      console.log("After merge", getNodesVertexCount(document.getRoot().listNodes()))
+      console.log("After merge", getNodesVertexCount(document.getRoot().listNodes()));
     }
   } else {
     document = await io.read(input);
@@ -56,7 +84,8 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   // const cell = quadtree(document);
   const cell = octree(document);
   const tileset = await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels);
-  (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input)
+  (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input);
+  tileset.extras.matrix = mainMatrix.reduce((pre, cur) => { pre.push(cur); return pre; }, [])
   await writeFile(path.join(output, "tileset.json"), JSON.stringify(tileset, null, 2));
   console.log("Tileset done");
   await create3dtilesContent(output, document, cell, extension);
