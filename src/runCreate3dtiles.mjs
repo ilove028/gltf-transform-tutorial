@@ -119,7 +119,7 @@ const extractFileName = (filePaths) => {
 }
 
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3);
+run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3);
 // await run(
 //   [
 //     "./public/6-company/01180100100000000000000000000000.glb",
