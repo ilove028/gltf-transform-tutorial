@@ -16,11 +16,11 @@ export class TilesImplicitTiling {
 
   static async write(tileset, filePath, cell, subtreeLevels = 3, extension = "glb") {
     const { root } = tileset;
-    const subpath = "";
+    const subpath = "subtrees";
     await writeSubtrees(cell, subtreeLevels, path.join(filePath, subpath))
 
     root.content = {
-      uri: `{level}-{x}-{y}${cell instanceof Cell3 ? `-{z}` : ""}.${extension}`
+      uri: `contents/{level}-{x}-{y}${cell instanceof Cell3 ? `-{z}` : ""}.${extension}`
     }
 
     root.implicitTiling = {

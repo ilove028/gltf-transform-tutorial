@@ -160,7 +160,7 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
 
     if (cell.contents) {
       result.content = {
-        uri: `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
+        uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
       }
 
       if (contentBbox && !useTilesImplicitTiling) {
@@ -334,7 +334,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       doc.createExtension(EXTMeshoptCompression)
         .setRequired(true)
         .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
-      await io.write(path.join(filePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`), doc);
+      const basePath = path.join(filePath, "contents");
+      await fse.ensureDir(basePath);
+      await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`), doc);
     }
     for (let i = 0; cell.children && i < cell.children.length; i++) {
       await write(filePath, document, cell.children[i]);
@@ -427,6 +429,7 @@ const writeSubtrees = async (cell, subtreeLevels, filePath) => {
     // const contentAvailability = Array(73).fill(false).map((v, i) => i === 6 ? true : false);
     // const childSubtreeAvailability = Array(512).fill(false);
     // const subtreeRoots = null;
+    await fse.ensureDir(filePath);
     await writeFile(
       path.join(filePath, `${subtreeRoot.level}-${subtreeRoot.x}-${subtreeRoot.y}${subtreeRoot instanceof Cell3 ? `-${subtreeRoot.z}` : ""}.subtree`),
       createSubtreeBinary({ tileAvailability, contentAvailability, childSubtreeAvailability, subtreeRoots })

@@ -1,4 +1,5 @@
 import { writeFile } from "fs/promises";
+import fse from "fs-extra";
 import path from "path";
 import { Extension, ExtensionProperty, PropertyType } from "@gltf-transform/core";
 import { paddingBuffer } from "../utils.mjs";
@@ -36,7 +37,9 @@ export class EXTStructuralMetadata extends Extension {
   }
 
   async writeSchema(filePath) {
-    await writeFile(path.join(filePath, "schema.json"), JSON.stringify(
+    const basePath = path.join(filePath, "contents");
+    await fse.ensureDir(basePath);
+    await writeFile(path.join(basePath, "schema.json"), JSON.stringify(
       {
         classes: {
           entity: {
