@@ -224,7 +224,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       nodes && nodes.forEach((node, nodeIndex) => {
         const primitives = node.getMesh().listPrimitives();
         const extras = node.getExtras();
-        metadata.addItem({ iid: extras && extras.iid ? extras.iid : null, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
+        metadata.addItem({ iid: extras && extras.iid ? extras.iid : `iid-${guid()}`, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
         if (extras && extras.iid) {
           // 获取node bound必须在transformPrimitive之前 因为转化后primitive 坐标会变换
           const pt = path.join(filePath, "metadata");
@@ -517,6 +517,8 @@ const paddingBuffer = (buffer) => {
   }
 }
 
+const guid = () => Math.random().toString(16).slice(2)
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -530,5 +532,6 @@ export {
   boolArray2Bin,
   getBuffersByteLength,
   distance,
-  paddingBuffer
+  paddingBuffer,
+  guid
 }
