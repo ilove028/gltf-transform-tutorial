@@ -15,7 +15,11 @@ const getRootExtrasMatrix = (document) => {
     : create()
 }
 
-const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3) => {
+const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod) => {
+  if (useLod) {
+    // 隐式暂时不支持Lod.
+    useTilesImplicitTiling = false
+  }
   await fse.ensureDir(output);
   await rm(output, { recursive: true });
   await fse.ensureDir(output);
@@ -88,12 +92,12 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   // const cell = noUniformQuadtree(document, 300000);
   // const cell = quadtree(document);
   const cell = octree(document);
-  const tileset = await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels);
+  const tileset = await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels, useLod);
   (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input);
   tileset.extras.matrix = mainMatrix.reduce((pre, cur) => { pre.push(cur); return pre; }, [])
   await writeFile(path.join(output, "tileset.json"), JSON.stringify(tileset, null, 2));
   console.log("Tileset done");
-  await create3dtilesContent(output, document, cell, extension);
+  await create3dtilesContent(output, document, cell, extension, useLod);
 
   console.log(
     `Level ${cell.getMaxLevel()}\n`,
@@ -118,20 +122,21 @@ const extractFileName = (filePaths) => {
   })
 }
 
-run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3);
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "gltf", false, 3);
-// await run(
-//   [
-//     "./public/6-company/01180100100000000000000000000000.glb",
-//     "./public/6-company/01180100101000000000000000000000.glb",
-//     "./public/6-company/01180100102000000000000000000000.glb",
-//     "./public/6-company/01180100103000000000000000000000.glb"
-//   ],
-//   "./public/3dtiles/01180100100000000000000000000000/",
-//   "glb",
-//   true,
-//   3
-// );
+// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3, true);
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true);
+await run(
+  [
+    "./public/6-company/01180100100000000000000000000000.glb",
+    "./public/6-company/01180100101000000000000000000000.glb",
+    "./public/6-company/01180100102000000000000000000000.glb",
+    "./public/6-company/01180100103000000000000000000000.glb"
+  ],
+  "./public/3dtiles/01180100100000000000000000000000/",
+  "glb",
+  true,
+  3,
+  true
+);
 // await run(
 //   [
 //     "./public/nb/terminal/04010101100000000000000000000000.glb",

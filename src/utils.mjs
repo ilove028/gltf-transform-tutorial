@@ -2,9 +2,9 @@ import path from "path";
 import { writeFile } from "fs/promises";
 import fse from "fs-extra";
 import { NodeIO, Document, Accessor, Material, getBounds } from "@gltf-transform/core";
-import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives } from "@gltf-transform/functions";
+import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
 import { EXTMeshoptCompression } from '@gltf-transform/extensions';
-import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
+import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import { VertexAttributeSemantic } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
@@ -134,24 +134,24 @@ const getGeometricError = (bbox) => {
   return distance(bbox.min, bbox.max);
 }
 
-const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subtreeLevels) => {
+const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subtreeLevels, useLod) => {
   const tileset = {
     asset: {
       version: "1.1"
     },
-    geometricError: getGeometricError(cell.bbox),
+    geometricError: getGeometricError(cell.bbox) * (useLod ? 1 : 1),
     root: null
   }
 
   const run = (cell) => {
-    const children = cell.children
+    let children = cell.children
       ? cell.children.map(c => run(c))
       : null;
     const contentBbox = getNodesBounds(cell.contents);
     const result = {
-      refine: "ADD",
+      refine: useLod ? "REPLACE" : "ADD",
       // TODO 这里 隐式还没在subtree写入 contentVolume 所以在隐式模式下 直接用 tile Volume
-      geometricError: useTilesImplicitTiling ? getGeometricError(cell.bbox) : getGeometricError(contentBbox || cell.bbox),
+      geometricError: useTilesImplicitTiling ? getGeometricError(cell.bbox) : getGeometricError(contentBbox || cell.bbox) * (useLod ? 1 : 1),
       boundingVolume: {
         // sphere: getTileSphere(cell)
         box: getBboxBox(cell.bbox)
@@ -159,13 +159,43 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
     }
 
     if (cell.contents) {
-      result.content = {
-        uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
-      }
-
-      if (contentBbox && !useTilesImplicitTiling) {
-        result.content.boundingVolume = {
-          box: getBboxBox(contentBbox)
+      if (useLod) {
+        const contentChild = {
+          refine: "REPLACE",
+          geometricError: useTilesImplicitTiling ? getGeometricError(cell.bbox) : getGeometricError(contentBbox || cell.bbox) * (useLod ? 0.5 : 1),
+          boundingVolume: {
+            // sphere: getTileSphere(cell)
+            box: getBboxBox(cell.bbox)
+          },
+          content: {
+            uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`
+          },
+          children: [{
+            refine: "REPLACE",
+            geometricError: 0,
+            boundingVolume: {
+              // sphere: getTileSphere(cell)
+              box: getBboxBox(cell.bbox)
+            },
+            content: {
+              uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-high.${extension}`
+            }
+          }]
+        }
+        if (!children) {
+          children = [contentChild];
+        } else {
+          children.unshift(contentChild)
+        }
+      } else {
+        result.content = {
+          uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
+        }
+  
+        if (contentBbox && !useTilesImplicitTiling) {
+          result.content.boundingVolume = {
+            box: getBboxBox(contentBbox)
+          }
         }
       }
     }
@@ -203,7 +233,7 @@ const pruneMaterial = (compareFn) => {
   })
 }
 
-const create3dtilesContent = async (filePath, document, cell, extension = "glb") => {
+const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod) => {
   const io = new NodeIO()
   .registerExtensions([EXTMeshoptCompression, EXTMeshFeatures, EXTStructuralMetadata])
   .registerDependencies({
@@ -322,6 +352,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
     const doc = createDocument(cell.contents);
 
     if (doc) {
+      let lowDoc;
+      const basePath = path.join(filePath, "contents");
+      await fse.ensureDir(basePath);
       await doc.transform(
         pruneMaterial(isMaterialLike),
         prune(),
@@ -333,9 +366,27 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb")
       doc.createExtension(EXTMeshoptCompression)
         .setRequired(true)
         .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
-      const basePath = path.join(filePath, "contents");
-      await fse.ensureDir(basePath);
-      await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`), doc);
+      
+      await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}${useLod ? "-high" : ""}.${extension}`), doc);
+    
+      if (useLod) {
+        // lowDoc = doc.clone();
+        lowDoc = doc;
+        await lowDoc.transform(
+          pruneMaterial(isMaterialLike),
+          prune(),
+          simplify({ simplifier: MeshoptSimplifier, ratio: 0.75, error: 0.1 }),
+          reorder({encoder: MeshoptEncoder}),
+          // quantize({
+          //   pattern: /^(POSITION)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型渲染暂时没有问题 GLTF模型展示不匹配 NORMAL会造成渲染不对
+          // })
+        );
+        lowDoc.createExtension(EXTMeshoptCompression)
+          .setRequired(true)
+          .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
+        
+        await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`), lowDoc);
+      }
     }
     for (let i = 0; cell.children && i < cell.children.length; i++) {
       await write(filePath, document, cell.children[i]);
