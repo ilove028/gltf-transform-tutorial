@@ -123,29 +123,30 @@ const extractFileName = (filePaths) => {
 }
 
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3, true);
-// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true);
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, false);
+// await run(
+//   [
+//     "./public/6-company/01180100100000000000000000000000.glb",
+//     "./public/6-company/01180100101000000000000000000000.glb",
+//     "./public/6-company/01180100102000000000000000000000.glb",
+//     "./public/6-company/01180100103000000000000000000000.glb"
+//   ],
+//   "./public/3dtiles/01180100100000000000000000000000/",
+//   "glb",
+//   true,
+//   3,
+//   true
+// );
 await run(
   [
-    "./public/6-company/01180100100000000000000000000000.glb",
-    "./public/6-company/01180100101000000000000000000000.glb",
-    "./public/6-company/01180100102000000000000000000000.glb",
-    "./public/6-company/01180100103000000000000000000000.glb"
+    "./public/nb/terminal/04010101100000000000000000000000.glb",
+    "./public/nb/terminal/04010107100000000000000000000000.glb",
+    "./public/nb/terminal/04010107200000000000000000000000.glb",
+    "./public/nb/terminal/04010101101000000000000000000000.glb",
   ],
-  "./public/3dtiles/01180100100000000000000000000000/",
+  "./public/3dtiles/04010101100000000000000000000000",
   "glb",
   true,
   3,
   true
 );
-// await run(
-//   [
-//     "./public/nb/terminal/04010101100000000000000000000000.glb",
-//     "./public/nb/terminal/04010107100000000000000000000000.glb",
-//     "./public/nb/terminal/04010107200000000000000000000000.glb",
-//     "./public/nb/terminal/04010101101000000000000000000000.glb",
-//   ],
-//   "./public/3dtiles/04010101100000000000000000000000",
-//   "glb",
-//   true,
-//   3
-// );
