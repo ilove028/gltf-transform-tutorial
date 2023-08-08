@@ -372,18 +372,21 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
       if (useLod) {
         // lowDoc = doc.clone();
         lowDoc = doc;
+        console.log("Before simplify", getNodesVertexCount(lowDoc.getRoot().listNodes()));
         await lowDoc.transform(
           pruneMaterial(isMaterialLike),
           prune(),
+          // TODO 修改参数有时MeshoptEncoder会报错
           simplify({ simplifier: MeshoptSimplifier, ratio: 0.75, error: 0.1 }),
           reorder({encoder: MeshoptEncoder}),
           // quantize({
           //   pattern: /^(POSITION)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型渲染暂时没有问题 GLTF模型展示不匹配 NORMAL会造成渲染不对
           // })
         );
-        lowDoc.createExtension(EXTMeshoptCompression)
-          .setRequired(true)
-          .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
+        console.log("After simplify", getNodesVertexCount(lowDoc.getRoot().listNodes()));
+        // lowDoc.createExtension(EXTMeshoptCompression)
+        //   .setRequired(true)
+        //   .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
         
         await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`), lowDoc);
       }
