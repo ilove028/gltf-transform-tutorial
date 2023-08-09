@@ -123,7 +123,7 @@ const extractFileName = (filePaths) => {
   })
 }
 
-// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, false, CompressType.KHRDracoMeshCompression);
+// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
 run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, true, CompressType.EXTMeshoptCompression);
 // await run(
 //   [
@@ -136,7 +136,8 @@ run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/040101004
 //   "glb",
 //   true,
 //   3,
-//   true
+//   true,
+//   CompressType.EXTMeshoptCompression
 // );
 // await run(
 //   [

@@ -97,7 +97,26 @@ const distance = (a, b) => Math.sqrt(
   + (a[2] - b[2]) * (a[2] - b[2])
 )
 
-const getNodesBounds = (nodes) => {
+const getNodesMaxBound = (nodes) => {
+  let bbox = nodes && nodes.length > 0 ? getBounds(nodes[0]) : null;
+  let size = distance(bbox.min, bbox.max);
+
+  for (let i = 0; nodes && i < nodes.length; i++) {
+    const { min, max } = getBounds(nodes[i]);
+    const curSize = distance(min, max);
+
+    if (curSize > size) {
+      size = curSize;
+      bbox = { min, max };
+    }
+  }
+
+  return bbox;
+}
+
+const getNodesBounds = (nodes) => nodes.map(n => getBounds(n))
+
+const getNodesBound = (nodes) => {
   let bbox = nodes && nodes.length > 0 ? getBounds(nodes[0]) : null;
 
   for (let i = 1; nodes && i < nodes.length; i++) {
@@ -135,12 +154,48 @@ const getGeometricError = (bbox) => {
   return distance(bbox.min, bbox.max);
 }
 
+const getGeometricError2 = (bbox) => {
+  // 因为getGeometricError使用包围球直径 无法很好表示长度很长的线性物体 其投影面积实际上很小
+  // 采用算3个视图面积 根据面积求取直径
+  const { min, max } = bbox;
+  const dx = max[0] - min[0];
+  const dy = max[1] - min[1];
+  const dz = max[2] - min[2];
+  const areaXY = dx * dy;
+  const areaYZ = dy * dz;
+  const areaZX = dz * dx;
+  const area = areaXY > areaYZ
+    ? areaXY > areaZX
+      ? areaXY : areaZX
+    : areaYZ > areaZX
+      ? areaYZ : areaZX
+
+  return Math.sqrt(area / Math.PI) * 2
+}
+
+const getBboxsMaxGeometricError2 = (bboxs) => {
+  if (!Array.isArray(bboxs)) {
+    bboxs = [bboxs];
+  }
+  let error = getGeometricError2(bboxs[0]);
+
+  for (let i = 1; i < bboxs.length; i++) {
+    const curErr = getGeometricError2(bboxs[i]);
+
+    if (curErr > error) {
+      error = curErr;
+    }
+  }
+
+  return error;
+}
+
 const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subtreeLevels, useLod) => {
   const tileset = {
     asset: {
       version: "1.1"
     },
-    geometricError: getGeometricError(cell.bbox) * (useLod ? 1 : 1),
+    geometricError: getBboxsMaxGeometricError2(cell.bbox) * (useLod ? 1 : 1),
     root: null
   }
 
@@ -148,11 +203,18 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
     let children = cell.children
       ? cell.children.map(c => run(c))
       : null;
-    const contentBbox = getNodesBounds(cell.contents);
+    const contentBbox = getNodesBound(cell.contents);
     const result = {
       refine: useLod ? "REPLACE" : "ADD",
       // TODO 这里 隐式还没在subtree写入 contentVolume 所以在隐式模式下 直接用 tile Volume
-      geometricError: useTilesImplicitTiling ? getGeometricError(cell.bbox) : getGeometricError(contentBbox || cell.bbox) * (useLod ? 1 : 1),
+      // geometricError: useTilesImplicitTiling
+      //   ? getBboxsMaxGeometricError2(cell.bbox)
+      //   : getBboxsMaxGeometricError2(
+      //       cell.contents && cell.contents.length > 0
+      //         ? getNodesBounds(cell.contents)
+      //         : cell.bbox
+      //     ) * (useLod ? 1 : 1),
+      geometricError: getBboxsMaxGeometricError2(cell.bbox),
       boundingVolume: {
         // sphere: getTileSphere(cell)
         box: getBboxBox(cell.bbox)
@@ -163,12 +225,15 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
       if (useLod) {
         const contentChild = {
           refine: "REPLACE",
-          geometricError: useTilesImplicitTiling ? getGeometricError(cell.bbox) : getGeometricError(contentBbox || cell.bbox) * (useLod ? 0.25 : 1),
+          geometricError: getBboxsMaxGeometricError2(contentBbox || cell.bbox),
           boundingVolume: {
             // sphere: getTileSphere(cell)
             box: getBboxBox(cell.bbox)
           },
           content: {
+            boundingVolume: {
+              box: getBboxBox(contentBbox)
+            },
             uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`
           },
           children: [{
@@ -179,6 +244,9 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
               box: getBboxBox(cell.bbox)
             },
             content: {
+              boundingVolume: {
+                box: getBboxBox(contentBbox)
+              },
               uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-high.${extension}`
             }
           }]
@@ -234,7 +302,7 @@ const pruneMaterial = (compareFn) => {
   })
 }
 
-const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod, compressType) => {
+const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod, compressType = CompressType.EXTMeshoptCompression) => {
   const io = new NodeIO()
   .registerExtensions([EXTMeshFeatures, EXTStructuralMetadata]);
 
