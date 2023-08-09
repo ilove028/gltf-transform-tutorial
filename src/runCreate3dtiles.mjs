@@ -2,6 +2,7 @@ import { NodeIO } from "@gltf-transform/core";
 import { prune, flatten } from "@gltf-transform/functions";
 import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
 import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount } from "./utils.mjs";
+import { CompressType } from "./constant.mjs";
 import { writeFile, rm } from "fs/promises";
 import path from "path";
 import glMatrix from "gl-matrix";
@@ -15,7 +16,7 @@ const getRootExtrasMatrix = (document) => {
     : create()
 }
 
-const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod) => {
+const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType) => {
   if (useLod) {
     // 隐式暂时不支持Lod.
     useTilesImplicitTiling = false
@@ -97,7 +98,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   tileset.extras.matrix = mainMatrix.reduce((pre, cur) => { pre.push(cur); return pre; }, [])
   await writeFile(path.join(output, "tileset.json"), JSON.stringify(tileset, null, 2));
   console.log("Tileset done");
-  await create3dtilesContent(output, document, cell, extension, useLod);
+  await create3dtilesContent(output, document, cell, extension, useLod, compressType);
 
   console.log(
     `Level ${cell.getMaxLevel()}\n`,
@@ -122,8 +123,8 @@ const extractFileName = (filePaths) => {
   })
 }
 
-// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "gltf", false, 3, true);
-// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, false);
+// run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, false, CompressType.KHRDracoMeshCompression);
+run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, true, CompressType.EXTMeshoptCompression);
 // await run(
 //   [
 //     "./public/6-company/01180100100000000000000000000000.glb",
@@ -137,16 +138,16 @@ const extractFileName = (filePaths) => {
 //   3,
 //   true
 // );
-await run(
-  [
-    "./public/nb/terminal/04010101100000000000000000000000.glb",
-    "./public/nb/terminal/04010107100000000000000000000000.glb",
-    "./public/nb/terminal/04010107200000000000000000000000.glb",
-    "./public/nb/terminal/04010101101000000000000000000000.glb",
-  ],
-  "./public/3dtiles/04010101100000000000000000000000",
-  "glb",
-  true,
-  3,
-  true
-);
+// await run(
+//   [
+//     "./public/nb/terminal/04010101100000000000000000000000.glb",
+//     "./public/nb/terminal/04010107100000000000000000000000.glb",
+//     "./public/nb/terminal/04010107200000000000000000000000.glb",
+//     "./public/nb/terminal/04010101101000000000000000000000.glb",
+//   ],
+//   "./public/3dtiles/04010101100000000000000000000000",
+//   "glb",
+//   true,
+//   3,
+//   true
+// );

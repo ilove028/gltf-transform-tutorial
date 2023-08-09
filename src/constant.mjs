@@ -1,3 +1,5 @@
+import { EXTMeshoptCompression, KHRDracoMeshCompression } from "@gltf-transform/extensions";
+
 const VertexAttributeSemantic = {
   /**
    * Per-vertex position.
@@ -64,6 +66,12 @@ const VertexAttributeSemantic = {
   FEATURE_ID: "_FEATURE_ID",
 };
 
+const CompressType = {
+  EXTMeshoptCompression: EXTMeshoptCompression.EXTENSION_NAME,
+  KHRDracoMeshCompression: KHRDracoMeshCompression.EXTENSION_NAME
+};
+
 export {
-  VertexAttributeSemantic
+  VertexAttributeSemantic,
+  CompressType
 }

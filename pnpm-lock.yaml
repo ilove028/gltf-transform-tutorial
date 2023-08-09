@@ -5,6 +5,7 @@ specifiers:
   '@gltf-transform/extensions': ^3.4.2
   '@gltf-transform/functions': ^3.4.2
   canvas: ^2.11.2
+  draco3dgltf: ^1.5.6
   fs-extra: ^11.1.1
   gl-matrix: ^3.4.3
   meshoptimizer: ^0.19.0
@@ -14,6 +15,7 @@ dependencies:
   '@gltf-transform/extensions': 3.4.2
   '@gltf-transform/functions': 3.4.2
   canvas: 2.11.2
+  draco3dgltf: 1.5.6
   fs-extra: 11.1.1
   gl-matrix: 3.4.3
   meshoptimizer: 0.19.0
@@ -250,6 +252,10 @@ packages:
   /detect-libc/2.0.1:
     resolution: {integrity: sha512-463v3ZeIrcWtdgIg6vI6XUncguvr2TnGl4SzDXinkt9mSLpBJKXT3mW6xT3VQdDN11+WVs29pgvivTc4Lp8v+w==}
     engines: {node: '>=8'}
+    dev: false
+
+  /draco3dgltf/1.5.6:
+    resolution: {integrity: sha512-wCKFfJhRB2lkAV/dzlKs+EmHSoI3x8w4Z8yBpkzLIF9GAvjh6jk90jomC13k/DLVFTJSesm8LHg9ok6p3OVfVA==}
     dev: false
 
   /ecc-jsbn/0.1.2:

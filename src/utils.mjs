@@ -3,9 +3,10 @@ import { writeFile } from "fs/promises";
 import fse from "fs-extra";
 import { NodeIO, Document, Accessor, Material, getBounds } from "@gltf-transform/core";
 import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
-import { EXTMeshoptCompression } from '@gltf-transform/extensions';
+import { EXTMeshoptCompression, KHRDracoMeshCompression } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
-import { VertexAttributeSemantic } from "./constant.mjs";
+import draco3d from 'draco3dgltf';
+import { VertexAttributeSemantic, CompressType } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
 
@@ -233,13 +234,23 @@ const pruneMaterial = (compareFn) => {
   })
 }
 
-const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod) => {
+const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod, compressType) => {
   const io = new NodeIO()
-  .registerExtensions([EXTMeshoptCompression, EXTMeshFeatures, EXTStructuralMetadata])
-  .registerDependencies({
-      'meshopt.decoder': MeshoptDecoder,
-      'meshopt.encoder': MeshoptEncoder,
-  });
+  .registerExtensions([EXTMeshFeatures, EXTStructuralMetadata]);
+
+  if (compressType === CompressType.EXTMeshoptCompression) {
+    io.registerExtensions([EXTMeshoptCompression])
+      .registerDependencies({
+        'meshopt.decoder': MeshoptDecoder,
+        'meshopt.encoder': MeshoptEncoder,
+      });
+  } else if (compressType === CompressType.KHRDracoMeshCompression) {
+    io.registerExtensions([KHRDracoMeshCompression])
+      .registerDependencies({
+        'draco3d.decoder': await draco3d.createDecoderModule(), // Optional.
+        'draco3d.encoder': await draco3d.createEncoderModule(), // Optional.
+      });
+  }
   const createDocument = (nodes) => {
     const materialMap = new Map();
     if (nodes) {
@@ -363,9 +374,22 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
         //   pattern: /^(POSITION)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型渲染暂时没有问题 GLTF模型展示不匹配 NORMAL会造成渲染不对
         // })
       );
-      doc.createExtension(EXTMeshoptCompression)
-        .setRequired(true)
-        .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
+      
+      if (compressType === CompressType.EXTMeshoptCompression) {
+        doc.createExtension(EXTMeshoptCompression)
+          .setRequired(true)
+          .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
+      } else if (compressType === CompressType.KHRDracoMeshCompression) {
+        // Draco虽然压缩相对高些 但 https://zhuanlan.zhihu.com/p/360235743 还有Meshopt Gzip 还有接近一般压缩
+        doc.createExtension(KHRDracoMeshCompression)
+          .setRequired(true)
+          .setEncoderOptions({
+              method: KHRDracoMeshCompression.EncoderMethod.EDGEBREAKER,
+              quantizationBits: {
+                NORMAL: 21 // normal quantizationBit 太小例如 10 会造成normal精度丢失太严重 展示不出normal效果
+              }
+          });
+      }
       
       await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}${useLod ? "-high" : ""}.${extension}`), doc);
     
