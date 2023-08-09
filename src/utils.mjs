@@ -225,7 +225,7 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
       if (useLod) {
         const contentChild = {
           refine: "REPLACE",
-          geometricError: getBboxsMaxGeometricError2(contentBbox || cell.bbox),
+          geometricError: getBboxsMaxGeometricError2(contentBbox || cell.bbox) * 0.5,
           boundingVolume: {
             // sphere: getTileSphere(cell)
             box: getBboxBox(cell.bbox)

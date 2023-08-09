@@ -124,7 +124,7 @@ const extractFileName = (filePaths) => {
 }
 
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, true, CompressType.EXTMeshoptCompression);
+run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, false, CompressType.EXTMeshoptCompression);
 // await run(
 //   [
 //     "./public/6-company/01180100100000000000000000000000.glb",
