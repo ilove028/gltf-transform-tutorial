@@ -233,6 +233,8 @@ const getSceneDescendant = (scene, hasMesh = false) => {
 }
 
 const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infinity, maxNodeSize: 1, axis: undefined }) =>{
+  // TODO https://blog.csdn.net/lj820348789/article/details/72845482 
+  // https://zhuanlan.zhihu.com/p/552433124
   const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
   const bbox = getBounds(scene);
   const xRange = bbox.max[0] - bbox.min[0];
