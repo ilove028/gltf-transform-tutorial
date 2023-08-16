@@ -124,7 +124,7 @@ const extractFileName = (filePaths) => {
 }
 
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, true, CompressType.EXTMeshoptCompression);
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", true, 3, true, CompressType.EXTMeshoptCompression);
 // await run(
 //   [
 //     "./public/6-company/01180100100000000000000000000000.glb",
@@ -139,16 +139,16 @@ run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/040101004
 //   true,
 //   CompressType.EXTMeshoptCompression
 // );
-// await run(
-//   [
-//     "./public/nb/terminal/04010101100000000000000000000000.glb",
-//     "./public/nb/terminal/04010107100000000000000000000000.glb",
-//     "./public/nb/terminal/04010107200000000000000000000000.glb",
-//     "./public/nb/terminal/04010101101000000000000000000000.glb",
-//   ],
-//   "./public/3dtiles/04010101100000000000000000000000",
-//   "glb",
-//   true,
-//   3,
-//   true
-// );
+await run(
+  [
+    "./public/nb/terminal/04010101100000000000000000000000.glb",
+    "./public/nb/terminal/04010107100000000000000000000000.glb",
+    "./public/nb/terminal/04010107200000000000000000000000.glb",
+    "./public/nb/terminal/04010101101000000000000000000000.glb",
+  ],
+  "./public/3dtiles/04010101100000000000000000000000",
+  "glb",
+  true,
+  3,
+  true
+);
