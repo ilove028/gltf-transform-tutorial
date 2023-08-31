@@ -139,14 +139,28 @@ const extractFileName = (filePaths) => {
 //   true,
 //   CompressType.EXTMeshoptCompression
 // );
+// await run(
+//   [
+//     "./public/nb/terminal/04010101100000000000000000000000.glb",
+//     "./public/nb/terminal/04010107100000000000000000000000.glb",
+//     "./public/nb/terminal/04010107200000000000000000000000.glb",
+//     "./public/nb/terminal/04010101101000000000000000000000.glb",
+//   ],
+//   "./public/3dtiles/04010101100000000000000000000000",
+//   "glb",
+//   true,
+//   3,
+//   true
+// );
+
 await run(
   [
-    "./public/nb/terminal/04010101100000000000000000000000.glb",
-    "./public/nb/terminal/04010107100000000000000000000000.glb",
-    "./public/nb/terminal/04010107200000000000000000000000.glb",
-    "./public/nb/terminal/04010101101000000000000000000000.glb",
+    "./public/jy/station/01060103600000000000000000000000.glb",
+    "./public/jy/station/01060103500000000000000000000000.glb",
+    "./public/jy/station/01060103400000000000000000000000.glb",
+    "./public/jy/station/01060103300000000000000000000000.glb",
   ],
-  "./public/3dtiles/04010101100000000000000000000000",
+  "./public/3dtiles/01060103600000000000000000000000",
   "glb",
   true,
   3,
