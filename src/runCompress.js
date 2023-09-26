@@ -21,13 +21,18 @@ const compression = require('compression')
 const app = express()
 const port = 7001
 
-app.use(compression({
-  filter() {
-    console.log("Run");
+// app.use(compression({
+//   filter() {
+//     console.log("Run");
 
-    return true;
-  }
-}))
+//     return true;
+//   }
+// }))
+
+app.all('*', function(req, res, next) {
+  res.setHeader('Content-Encoding', 'gzip');
+  next();
+})
 app.all('*', function (req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
