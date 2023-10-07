@@ -515,6 +515,10 @@ const isBboxContain = (containerBBox, bbox) => {
     && containerBBox.max[2] >= bbox.max[2]
 }
 
+const distanceSquared = (point1, point2) => (point2[0] - point1[0]) * (point2[0] - point1[0])
+  + (point2[1] - point1[1]) * (point2[1] - point1[1])
+  + (point2[2] - point1[2]) * (point2[2] - point1[2])
+
 const createSubtreeBinary = ({ tileAvailability, contentAvailability, childSubtreeAvailability }) => {
   const magic = Buffer.from("subt");
   const version = Buffer.from(new Uint32Array([1]).buffer);
@@ -670,6 +674,24 @@ const paddingBuffer = (buffer) => {
 
 const guid = () => Math.random().toString(16).slice(2)
 
+const combineBbox = (bbox1, bbox2) => {
+  const { min: min1, max: max1 } = bbox1;
+  const { min: min2, max: max2 } = bbox2;
+
+  return {
+    min: [
+      min1[0] < min2[0] ? min1[0] : min2[0],
+      min1[1] < min2[1] ? min1[1] : min2[1],
+      min1[2] < min2[2] ? min1[2] : min2[2]
+    ],
+    max: [
+      max1[0] > max2[0] ? max1[0] : max2[0],
+      max1[1] > max2[1] ? max1[1] : max2[1],
+      max1[2] > max2[2] ? max1[2] : max2[2]
+    ]
+  }
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -684,5 +706,7 @@ export {
   getBuffersByteLength,
   distance,
   paddingBuffer,
-  guid
+  guid,
+  distanceSquared,
+  combineBbox
 }
