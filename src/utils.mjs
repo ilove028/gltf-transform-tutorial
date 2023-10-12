@@ -1,9 +1,9 @@
 import path from "path";
 import { writeFile } from "fs/promises";
 import fse from "fs-extra";
-import { NodeIO, Document, Accessor, Material, getBounds } from "@gltf-transform/core";
+import { NodeIO, Document, Accessor, Material, getBounds, TextureInfo } from "@gltf-transform/core";
 import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
-import { EXTMeshoptCompression, KHRDracoMeshCompression } from '@gltf-transform/extensions';
+import { EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
 import { VertexAttributeSemantic, CompressType } from "./constant.mjs";
@@ -304,7 +304,7 @@ const pruneMaterial = (compareFn) => {
 
 const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod, compressType = CompressType.EXTMeshoptCompression) => {
   const io = new NodeIO()
-  .registerExtensions([EXTMeshFeatures, EXTStructuralMetadata]);
+  .registerExtensions([EXTMeshFeatures, EXTStructuralMetadata, KHRTextureTransform]);
 
   if (compressType === CompressType.EXTMeshoptCompression) {
     io.registerExtensions([EXTMeshoptCompression])
@@ -353,7 +353,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           )
 
           primitive.listSemantics().forEach((semantic) => {
-            if (semantic === VertexAttributeSemantic.POSITION || semantic === VertexAttributeSemantic.NORMAL) {
+            if (semantic === VertexAttributeSemantic.POSITION || semantic === VertexAttributeSemantic.NORMAL || semantic === VertexAttributeSemantic.TEXCOORD_0) {
               const oldAccessor = primitive.getAttribute(semantic);
 
               newPrimitive.setAttribute(
@@ -393,12 +393,41 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           });
 
           if (!existMesh) {
-            existMaterial = newDocument
-              .createMaterial()
-              .setBaseColorFactor(oldMaterial.getBaseColorFactor())
-              .setRoughnessFactor(0.02)
-              .setMetallicFactor(0.4)
-              .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE);
+            const oldTexture = oldMaterial.getBaseColorTexture();
+            if(oldTexture){
+              const texture = newDocument.createTexture(oldTexture.getName())
+              .setImage(oldTexture.getImage())
+              .setMimeType(oldTexture.getMimeType());
+
+              existMaterial = newDocument.createMaterial(oldMaterial.getName())
+                .setBaseColorFactor(oldMaterial.getBaseColorFactor())
+                .setBaseColorTexture(texture)
+                .setRoughnessFactor(0.02)
+                .setMetallicFactor(0.4)
+                .setDoubleSided(true);
+
+              const textureInfo = existMaterial.getBaseColorTextureInfo();
+              textureInfo.setMagFilter(TextureInfo.MagFilter.LINEAR)
+              textureInfo.setMinFilter(TextureInfo.MinFilter.LINEAR)
+
+              //贴图重复值不为1时
+              const scale = oldMaterial.getBaseColorTextureInfo().getExtension('KHR_texture_transform');
+              if (scale) {
+                const transformExtension = newDocument.createExtension(KHRTextureTransform)
+                  .setRequired(true);
+                const transform = transformExtension.createTransform()
+                  .setScale(scale.getScale());
+                textureInfo.setExtension('KHR_texture_transform', transform);
+              }
+            }else{
+              existMaterial = newDocument
+                .createMaterial(oldMaterial.getName())
+                .setBaseColorFactor(oldMaterial.getBaseColorFactor())
+                .setRoughnessFactor(0.02)
+                .setMetallicFactor(0.4)
+                .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
+                .setDoubleSided(true);
+            }
             existMesh = newDocument.createMesh();
             materialMap.set(existMaterial, existMesh);
           }
@@ -408,18 +437,36 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
       });
 
       materialMap.forEach((mesh) => {
-        const primitives = mesh.listPrimitives();
-        const mergedPrimitive = joinPrimitives(primitives);
+        let primitives = mesh.listPrimitives();
+        // console.log(222, primitives.length)
+        // if(primitives.length === 356){
+        //   return;
+        //   primitives = primitives.slice(111,112);//(109,111)
 
-        mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
-        primitives.forEach(p => p.dispose());
-        mesh.addPrimitive(mergedPrimitive);
-        scene.addChild(
-          newDocument.createNode()
-            // .setExtras(node.getExtras())
-            // .setMatrix(node.getMatrix())
-            .setMesh(mesh)
-        )
+        //   const mergedPrimitive = joinPrimitives(primitives);
+
+        //   mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
+        //   primitives.forEach(p => p.dispose());
+        //   mesh.addPrimitive(mergedPrimitive);
+        //   scene.addChild(
+        //     newDocument.createNode()
+        //       // .setExtras(node.getExtras())
+        //       // .setMatrix(node.getMatrix())
+        //       .setMesh(mesh)
+        //   )
+        // }else{
+          const mergedPrimitive = joinPrimitives(primitives);
+
+          mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
+          primitives.forEach(p => p.dispose());
+          mesh.addPrimitive(mergedPrimitive);
+          scene.addChild(
+            newDocument.createNode()
+              // .setExtras(node.getExtras())
+              // .setMatrix(node.getMatrix())
+              .setMesh(mesh)
+          )
+        //}
       });
 
       metadataExt.writeSchema(filePath);
@@ -492,6 +539,17 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
 }
 
 const isMaterialLike = (aMaterial, bMaterial) => {
+  return aMaterial.getName() === bMaterial.getName()
+  // const aTexture = aMaterial.getBaseColorTexture();
+  // const bTexture = bMaterial.getBaseColorTexture();
+  // if(!!aTexture || !!bTexture){
+  //   if(!!aTexture && !!bTexture&& aTexture.getImage().toString() === bTexture.getImage().toString()){
+  //     return true
+  //   }else{
+  //     return false
+  //   }
+  // }
+
   const a = aMaterial.getBaseColorFactor();
   const b = bMaterial.getBaseColorFactor();
   

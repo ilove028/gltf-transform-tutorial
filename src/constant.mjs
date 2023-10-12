@@ -31,7 +31,7 @@ const VertexAttributeSemantic = {
    * @type {string}
    * @constant
    */
-  TEXCOORD: "TEXCOORD",
+   TEXCOORD_0: "TEXCOORD_0",
 
   /**
    * Per-vertex color.
