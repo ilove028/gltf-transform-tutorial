@@ -126,21 +126,21 @@ const extractFileName = (filePaths) => {
 
 // isNonuniform 非标准划 隐式还不支持 标准才支持隐式 lod不支持隐式 同时为true 隐式会被默认设置为false 因为隐式必须是标准四叉树或者八叉树 使用lod 会把父节点高精度和子节点同级 就不是标准四叉树或者八叉树了
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, false, CompressType.EXTMeshoptCompression);
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
-// await run(
-//   [
-//     "./public/6-company/01180100100000000000000000000000.glb",
-//     "./public/6-company/01180100101000000000000000000000.glb",
-//     "./public/6-company/01180100102000000000000000000000.glb",
-//     "./public/6-company/01180100103000000000000000000000.glb"
-//   ],
-//   "./public/3dtiles/01180100100000000000000000000000/",
-//   "glb",
-//   true,
-//   3,
-//   true,
-//   CompressType.EXTMeshoptCompression
-// );
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
+await run(
+  [
+    "./public/6-company/01180100100000000000000000000000.glb",
+    "./public/6-company/01180100101000000000000000000000.glb",
+    "./public/6-company/01180100102000000000000000000000.glb",
+    "./public/6-company/01180100103000000000000000000000.glb"
+  ],
+  "./public/3dtiles/01180100100000000000000000000000/",
+  "glb",
+  false,
+  3,
+  true,
+  CompressType.EXTMeshoptCompression
+);
 // await run(
 //   [
 //     "./public/nb/terminal/04010101100000000000000000000000.glb",
