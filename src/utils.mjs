@@ -2,13 +2,15 @@ import path from "path";
 import { writeFile } from "fs/promises";
 import fse from "fs-extra";
 import { NodeIO, Document, Accessor, Material, getBounds, TextureInfo } from "@gltf-transform/core";
-import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
+import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives, simplify, compressTexture } from "@gltf-transform/functions";
 import { EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
 import { VertexAttributeSemantic, CompressType } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
+import sharp from 'sharp';
+import md5 from 'blueimp-md5'
 
 const getNodeVertexCount = (node) => {
   const mesh = node.getMesh();
@@ -225,7 +227,7 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
       if (useLod) {
         const contentChild = {
           refine: "REPLACE",
-          geometricError: getBboxsMaxGeometricError2(contentBbox || cell.bbox) * 0.5,
+          geometricError: getBboxsMaxGeometricError2(getNodesBounds(cell.contents)),
           boundingVolume: {
             // sphere: getTileSphere(cell)
             box: getBboxBox(cell.bbox)
@@ -260,7 +262,7 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
         result.content = {
           uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
         }
-  
+        result.geometricError = getBboxsMaxGeometricError2(getNodesBounds(cell.contents));
         if (contentBbox && !useTilesImplicitTiling) {
           result.content.boundingVolume = {
             box: getBboxBox(contentBbox)
@@ -319,7 +321,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
         'draco3d.encoder': await draco3d.createEncoderModule(), // Optional.
       });
   }
-  const createDocument = (nodes) => {
+  const createDocument =async (nodes) => {
     const materialMap = new Map();
     if (nodes) {
       const newDocument = new Document();
@@ -330,7 +332,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
       const metadata = metadataExt.createMeatdata();
 
       newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata);
-      nodes && nodes.forEach((node, nodeIndex) => {
+      for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+        const node = nodes[nodeIndex];
         const primitives = node.getMesh().listPrimitives();
         const extras = node.getExtras();
         metadata.addItem({ iid: extras && extras.iid ? extras.iid : `iid-${guid()}`, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
@@ -340,7 +343,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           fse.ensureDir(pt)
           fse.writeJSONSync(path.join(pt, `${extras.iid}.json`), { box: getBboxBox(getBounds(node)) })
         }
-        primitives.forEach((primitive) => {
+        for (let j = 0; j < primitives.length; j++) {
+          const primitive = primitives[j];
           transformPrimitive(primitive, node.getWorldMatrix());
           const newPrimitive = newDocument.createPrimitive();
           const oldMaterial = primitive.getMaterial();
@@ -395,9 +399,12 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           if (!existMesh) {
             const oldTexture = oldMaterial.getBaseColorTexture();
             if(oldTexture){
+              const image = oldTexture.getImage();
+              const md5Value = md5(image);
+              const md5Url = md5Value+'.webp';
               const texture = newDocument.createTexture(oldTexture.getName())
-              .setImage(oldTexture.getImage())
-              .setMimeType(oldTexture.getMimeType());
+              .setImage(image)
+              .setURI(md5Url)
 
               existMaterial = newDocument.createMaterial(oldMaterial.getName())
                 .setBaseColorFactor(oldMaterial.getBaseColorFactor())
@@ -406,7 +413,12 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 .setMetallicFactor(0.4)
                 .setDoubleSided(true);
 
-              const textureInfo = existMaterial.getBaseColorTextureInfo();
+              await compressTexture(texture, {
+                encoder: sharp,
+                targetFormat: 'webp'
+              });
+
+              const textureInfo = existMaterial.getBaseColorTextureInfo(); // 未生效
               textureInfo.setMagFilter(TextureInfo.MagFilter.LINEAR)
               textureInfo.setMinFilter(TextureInfo.MinFilter.LINEAR)
 
@@ -433,40 +445,22 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           }
           newPrimitive.setMaterial(existMaterial);
           existMesh.addPrimitive(newPrimitive);
-        })
-      });
+        }
+      };
 
       materialMap.forEach((mesh) => {
         let primitives = mesh.listPrimitives();
-        // console.log(222, primitives.length)
-        // if(primitives.length === 356){
-        //   return;
-        //   primitives = primitives.slice(111,112);//(109,111)
+        const mergedPrimitive = joinPrimitives(primitives);
 
-        //   const mergedPrimitive = joinPrimitives(primitives);
-
-        //   mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
-        //   primitives.forEach(p => p.dispose());
-        //   mesh.addPrimitive(mergedPrimitive);
-        //   scene.addChild(
-        //     newDocument.createNode()
-        //       // .setExtras(node.getExtras())
-        //       // .setMatrix(node.getMatrix())
-        //       .setMesh(mesh)
-        //   )
-        // }else{
-          const mergedPrimitive = joinPrimitives(primitives);
-
-          mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
-          primitives.forEach(p => p.dispose());
-          mesh.addPrimitive(mergedPrimitive);
-          scene.addChild(
-            newDocument.createNode()
-              // .setExtras(node.getExtras())
-              // .setMatrix(node.getMatrix())
-              .setMesh(mesh)
-          )
-        //}
+        mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
+        primitives.forEach(p => p.dispose());
+        mesh.addPrimitive(mergedPrimitive);
+        scene.addChild(
+          newDocument.createNode()
+            // .setExtras(node.getExtras())
+            // .setMatrix(node.getMatrix())
+            .setMesh(mesh)
+        )
       });
 
       metadataExt.writeSchema(filePath);
@@ -475,7 +469,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
   }
 
   const write = async (filePath, document, cell) => {
-    const doc = createDocument(cell.contents);
+    const doc = await createDocument(cell.contents);
 
     if (doc) {
       let lowDoc;
@@ -512,22 +506,27 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
         // lowDoc = doc.clone();
         lowDoc = doc;
         console.log("Before simplify", getNodesVertexCount(lowDoc.getRoot().listNodes()));
-        await lowDoc.transform(
-          pruneMaterial(isMaterialLike),
-          prune(),
-          // TODO 修改参数有时MeshoptEncoder会报错
-          simplify({ simplifier: MeshoptSimplifier, ratio: 0.75, error: 0.1 }),
-          reorder({encoder: MeshoptEncoder}),
-          // quantize({
-          //   pattern: /^(POSITION)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型渲染暂时没有问题 GLTF模型展示不匹配 NORMAL会造成渲染不对
-          // })
-        );
-        console.log("After simplify", getNodesVertexCount(lowDoc.getRoot().listNodes()));
-        // lowDoc.createExtension(EXTMeshoptCompression)
-        //   .setRequired(true)
-        //   .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
-        
-        await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`), lowDoc);
+        try {
+          // 解决有时候meshopt压缩会报错问题
+          await lowDoc.transform(
+            pruneMaterial(isMaterialLike),
+            prune(),
+            // TODO 修改参数有时MeshoptEncoder会报错
+            simplify({ simplifier: MeshoptSimplifier, ratio: 0.75, error: 0.1 }),
+            reorder({encoder: MeshoptEncoder}),
+            // quantize({
+            //   pattern: /^(POSITION)(_\d+)?$/ // TODO quantize 有损压缩 POSITION会造成包围球和模型渲染暂时没有问题 GLTF模型展示不匹配 NORMAL会造成渲染不对
+            // })
+          );
+          console.log("After simplify", getNodesVertexCount(lowDoc.getRoot().listNodes()));
+          // lowDoc.createExtension(EXTMeshoptCompression)
+          //   .setRequired(true)
+          //   .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
+          
+          await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`), lowDoc);
+        } catch (err) {
+          console.error(`${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension} compress failed`);
+        }
       }
     }
     for (let i = 0; cell.children && i < cell.children.length; i++) {
@@ -567,6 +566,10 @@ const isBboxContain = (containerBBox, bbox) => {
     && containerBBox.max[1] >= bbox.max[1]
     && containerBBox.max[2] >= bbox.max[2]
 }
+
+const distanceSquared = (point1, point2) => (point2[0] - point1[0]) * (point2[0] - point1[0])
+  + (point2[1] - point1[1]) * (point2[1] - point1[1])
+  + (point2[2] - point1[2]) * (point2[2] - point1[2])
 
 const createSubtreeBinary = ({ tileAvailability, contentAvailability, childSubtreeAvailability }) => {
   const magic = Buffer.from("subt");
@@ -723,6 +726,24 @@ const paddingBuffer = (buffer) => {
 
 const guid = () => Math.random().toString(16).slice(2)
 
+const combineBbox = (bbox1, bbox2) => {
+  const { min: min1, max: max1 } = bbox1;
+  const { min: min2, max: max2 } = bbox2;
+
+  return {
+    min: [
+      min1[0] < min2[0] ? min1[0] : min2[0],
+      min1[1] < min2[1] ? min1[1] : min2[1],
+      min1[2] < min2[2] ? min1[2] : min2[2]
+    ],
+    max: [
+      max1[0] > max2[0] ? max1[0] : max2[0],
+      max1[1] > max2[1] ? max1[1] : max2[1],
+      max1[2] > max2[2] ? max1[2] : max2[2]
+    ]
+  }
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -737,5 +758,7 @@ export {
   getBuffersByteLength,
   distance,
   paddingBuffer,
-  guid
+  guid,
+  distanceSquared,
+  combineBbox
 }

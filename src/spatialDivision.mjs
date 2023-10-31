@@ -1,5 +1,5 @@
 import { getBounds } from "@gltf-transform/core";
-import { distance, getNodesVertexCount, getNodeVertexCount, isBboxContain } from "./utils.mjs"
+import { distance, getNodesVertexCount, getNodeVertexCount, isBboxContain, distanceSquared, combineBbox } from "./utils.mjs"
 import Cell, { Cell3 } from "./Cell.mjs";
 
 const AXIS = {
@@ -217,7 +217,23 @@ const noUniformQuadtree = (document, maxVertexCount = 300000, axis) => {
   // 这里简单通过数组判空来对应 axis
   return divide(new Cell(bbox), [nodeListX, nodeListY, nodeListZ].filter(l => l.length > 0), vertexCount);
 }
-const isCellContainsNode = (cell, node) => isBboxContain(cell.bbox, getBounds(node))
+const isCellContainsNode = (cell, node, isNonuniform) => {
+  const bbox = getBounds(node);
+  return isBboxContain(cell.bbox, bbox)
+    // 点可以想象成min和max都在一个点的bbox
+    // 如果是非标准模式 node在一个Cell里面 1. 完全在Cell里面 2. 中心点在Cell里面 并且直径小于Cell直径
+    || (
+        isNonuniform
+        && isBboxContain(
+            cell.bbox,
+            {
+              min: [(bbox.min[0] + bbox.max[0]) / 2, (bbox.min[1] + bbox.max[1]) / 2, (bbox.min[2] + bbox.max[2]) / 2],
+              max: [(bbox.min[0] + bbox.max[0]) / 2, (bbox.min[1] + bbox.max[1]) / 2, (bbox.min[2] + bbox.max[2]) / 2]
+            }
+          )
+        && distanceSquared(cell.bbox.min, cell.bbox.max) > distanceSquared(bbox.min, bbox.max)
+        )
+}
 
 const getSceneDescendant = (scene, hasMesh = false) => {
   const result = [];
@@ -232,7 +248,9 @@ const getSceneDescendant = (scene, hasMesh = false) => {
   return result;
 }
 
-const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infinity, maxNodeSize: 1, axis: undefined }) =>{
+const quadtree = (document, { maxLevel, maxNodeSize, axis, isNonuniform } = { maxLevel: Infinity, maxNodeSize: 1, axis: undefined, isNonuniform: false }) =>{
+  // TODO https://blog.csdn.net/lj820348789/article/details/72845482 
+  // https://zhuanlan.zhihu.com/p/552433124
   const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
   const bbox = getBounds(scene);
   const xRange = bbox.max[0] - bbox.min[0];
@@ -410,7 +428,7 @@ const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infini
         // node是否可以划分进下一级
         for (let i = 0; i < childrenCells.length; i++) {
           const cell = childrenCells[i];
-          if (isCellContainsNode(cell, node)) {
+          if (isCellContainsNode(cell, node, isNonuniform)) {
             isChildCellContains = true;
             childrenNodes[i].push(node);
             break;
@@ -423,6 +441,12 @@ const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infini
       }
 
       childrenCells.forEach((cell, i) => {
+        if (isNonuniform) {
+          // 如果是非标准 Cell 包围盒有可能变大需要修正
+          childrenNodes[i].forEach((node) => {
+            cell.bbox = combineBbox(cell.bbox, getBounds(node))
+          })
+        }
         divide(cell, axis, childrenNodes[i]);
       });
 
@@ -437,7 +461,13 @@ const quadtree = (document, { maxLevel, maxNodeSize, axis } = { maxLevel: Infini
   return divide(new Cell(bbox), axis, getSceneDescendant(scene, true));
 }
 
-const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount } = { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: 500000 }) => {
+/**
+ * 八叉树划分
+ * @param {*} document
+ * @param {{ maxLevel, maxNodeSize, maxRadius, maxVertexCount, isNonuniform }} param1
+ * @returns 
+ */
+const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount, isNonuniform } = { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: 500000, isNonuniform: false }) => {
   const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0];
   const bbox = getBounds(scene);
   const divideCell = (cell) => {
@@ -560,7 +590,7 @@ const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount } =
         // node是否可以划分进下一级
         for (let i = 0; i < childrenCells.length; i++) {
           const cell = childrenCells[i];
-          if (isCellContainsNode(cell, node)) {
+          if (isCellContainsNode(cell, node, isNonuniform)) {
             isChildCellContains = true;
             childrenNodes[i].push(node);
             break;
@@ -574,6 +604,12 @@ const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount } =
 
       if (childrenNodes.some(nodes => nodes.length > 0)) {
         childrenCells.forEach((cell, i) => {
+          if (isNonuniform) {
+            // 如果是非标准 Cell 包围盒有可能变大需要修正
+            childrenNodes[i].forEach((node) => {
+              cell.bbox = combineBbox(cell.bbox, getBounds(node))
+            })
+          }
           divide(cell, childrenNodes[i]);
         });
   
