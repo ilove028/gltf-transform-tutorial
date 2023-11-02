@@ -164,7 +164,7 @@ run(["./public/mei-shi-gltf/01150100101000000000000000000000.gltf",
 //   ],
 //   "./public/3dtiles/01180100100000000000000000000000/",
 //   "glb",
-//   true,
+//   false,
 //   3,
 //   true,
 //   CompressType.EXTMeshoptCompression

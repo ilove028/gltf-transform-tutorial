@@ -336,6 +336,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
         const node = nodes[nodeIndex];
         const primitives = node.getMesh().listPrimitives();
         const extras = node.getExtras();
+        // 第一步导出会保证有IID没有IID也会随机生成一个 16位字符长度的站场IID，再用-拼接一个随机字符串
         metadata.addItem({ iid: extras && extras.iid ? extras.iid : `iid-${guid()}`, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
         if (extras && extras.iid) {
           // 获取node bound必须在transformPrimitive之前 因为转化后primitive 坐标会变换
