@@ -128,19 +128,19 @@ const extractFileName = (filePaths) => {
 
 // isNonuniform 非标准划 隐式还不支持 标准才支持隐式 lod不支持隐式 同时为true 隐式会被默认设置为false 因为隐式必须是标准四叉树或者八叉树 使用lod 会把父节点高精度和子节点同级 就不是标准四叉树或者八叉树了
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, false, CompressType.EXTMeshoptCompression);
-//run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
-run(["./public/mei-shi-gltf/01150100101000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100102000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100103000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100104000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100105000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100106000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100107000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100108000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100109000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100110000000000000000000000.gltf",
-"./public/mei-shi-gltf/01150100111000000000000000000000.gltf"],
-"./public/3dtiles/01150100100000000000000000000000/", "gltf", false, 3, false, CompressType.EXTMeshoptCompression);
+run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
+// run(["./public/mei-shi-gltf/01150100101000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100102000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100103000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100104000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100105000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100106000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100107000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100108000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100109000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100110000000000000000000000.gltf",
+// "./public/mei-shi-gltf/01150100111000000000000000000000.gltf"],
+// "./public/3dtiles/01150100100000000000000000000000/", "gltf", false, 3, false, CompressType.EXTMeshoptCompression);
 // run(["./public/mei-shi/01150100101000000000000000000000.glb",
 // "./public/mei-shi/01150100102000000000000000000000.glb",
 // "./public/mei-shi/01150100103000000000000000000000.glb",
