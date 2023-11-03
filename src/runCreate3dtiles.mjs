@@ -17,7 +17,7 @@ const getRootExtrasMatrix = (document) => {
     : create()
 }
 
-const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType) => {
+const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000) => {
   if (useLod) {
     // 隐式暂时不支持Lod.
     useTilesImplicitTiling = false
@@ -95,7 +95,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   // const cell = noUniformQuadtree(document, 300000);
   // const cell = quadtree(document);
   // isNonuniform 非标准划 隐式还不支持 标准才支持隐式 
-  const cell = octree(document, { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: 500000, isNonuniform: true });
+  const cell = octree(document, { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: maxVertexCount, isNonuniform: true });
   const tileset = await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels, useLod);
   (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input);
   tileset.extras.matrix = mainMatrix.reduce((pre, cur) => { pre.push(cur); return pre; }, [])
@@ -128,7 +128,7 @@ const extractFileName = (filePaths) => {
 
 // isNonuniform 非标准划 隐式还不支持 标准才支持隐式 lod不支持隐式 同时为true 隐式会被默认设置为false 因为隐式必须是标准四叉树或者八叉树 使用lod 会把父节点高精度和子节点同级 就不是标准四叉树或者八叉树了
 // run("./public/ship-attr.gltf", "./public/3dtiles/ship/", "glb", false, 3, false, CompressType.EXTMeshoptCompression);
-run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
+// run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/04010100400000000000000000000000/", "glb", false, 3, true, CompressType.EXTMeshoptCompression);
 // run(["./public/mei-shi-gltf/01150100101000000000000000000000.gltf",
 // "./public/mei-shi-gltf/01150100102000000000000000000000.gltf",
 // "./public/mei-shi-gltf/01150100103000000000000000000000.gltf",
@@ -228,3 +228,20 @@ run("./public/04010100400000000000000000000000.glb", "./public/3dtiles/040101004
 //   3,
 //   true
 // );
+
+if (process.argv[2]) {
+  const config = JSON.parse(fse.readFileSync(process.argv[2], { encoding: "utf-8" }));
+  const {
+    input,
+    output,
+    extension = 'glb',
+    useTilesImplicitTiling = false,
+    maxVertexCount = 500000,
+    subtreeLevels = 3,
+    useLod = false,
+    compressType = 'EXT_meshopt_compression'
+  } = config;
+  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount)
+} else {
+  throw new Error("需要指定一个JSON配置文件")
+}
