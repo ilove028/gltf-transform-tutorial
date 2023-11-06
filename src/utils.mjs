@@ -412,7 +412,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 .setBaseColorTexture(texture)
                 .setRoughnessFactor(0.02)
                 .setMetallicFactor(0.4)
-                .setDoubleSided(true);
+                .setDoubleSided(oldMaterial.getDoubleSided())
+                .setAlphaMode(oldMaterial.getAlphaMode());
 
               await compressTexture(texture, {
                 encoder: sharp,
@@ -439,7 +440,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 .setRoughnessFactor(0.02)
                 .setMetallicFactor(0.4)
                 .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
-                .setDoubleSided(true);
+                // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
+                // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
+                .setDoubleSided(oldMaterial.getDoubleSided());
             }
             existMesh = newDocument.createMesh();
             materialMap.set(existMaterial, existMesh);

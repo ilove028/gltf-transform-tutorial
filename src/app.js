@@ -13,7 +13,7 @@ async function run() {
       'meshopt.decoder': MeshoptDecoder,
       'meshopt.encoder': MeshoptEncoder,
   });
-  const document = await io.read("./public/04010100400000000000000000000000.glb")
+  const document = await io.read("./04010100400000000000000000000000.glb")
   await fse.ensureDir('./public/exe');
   // await fse.writeFile("./public/exe/log.txt", `${doc.getRoot().listNodes().length}`)
   await document.transform(
@@ -23,7 +23,7 @@ async function run() {
   document.createExtension(EXTMeshoptCompression)
       .setRequired(true)
       .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
-  await io.write('./public/exe/04010100400000000000000000000000.glb', document);
+  await io.write('./3dtiles/04010100400000000000000000000000.glb', document);
 }
 
 run()
