@@ -53,6 +53,6 @@ const compression = async (rootPath, destination, options) => {
 // compression(path.join(__dirname, "../public/nb/Station_4010101100000000000000000000000_Unity"), path.join(__dirname, "../public/gzip/nb/Station_4010101100000000000000000000000_Unity"))
 // compression(path.join(__dirname, "../public/mei-shi"), path.join(__dirname, "../public/gzip/mei-shi"))
 
-exports.default = {
-  compression
-}
+// exports.default = {
+//   compression
+// }

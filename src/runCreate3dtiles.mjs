@@ -1,7 +1,7 @@
 import { NodeIO } from "@gltf-transform/core";
 import { prune, flatten } from "@gltf-transform/functions";
 import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
-import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount } from "./utils.mjs";
+import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount, compress } from "./utils.mjs";
 import { CompressType } from "./constant.mjs";
 import { writeFile, rm } from "fs/promises";
 import path from "path";
@@ -17,7 +17,7 @@ const getRootExtrasMatrix = (document) => {
     : create()
 }
 
-const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000) => {
+const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000, useGzip) => {
   if (useLod) {
     // 隐式暂时不支持Lod.
     useTilesImplicitTiling = false
@@ -99,10 +99,12 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   const tileset = await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels, useLod);
   (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input);
   tileset.extras.matrix = mainMatrix.reduce((pre, cur) => { pre.push(cur); return pre; }, [])
-  await writeFile(path.join(output, "tileset.json"), JSON.stringify(tileset, null, 2));
+  await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
   console.log("Tileset done");
   await create3dtilesContent(output, document, cell, extension, useLod, compressType);
-
+  if (useGzip) {
+    await compress(output)
+  }
   console.log(
     `Level ${cell.getMaxLevel()}\n`,
     `Cell count ${cell.getCount()}\n`,
@@ -239,9 +241,10 @@ if (process.argv[2]) {
     maxVertexCount = 500000,
     subtreeLevels = 3,
     useLod = false,
-    compressType = 'EXT_meshopt_compression'
+    compressType = 'EXT_meshopt_compression',
+    useGzip = true
   } = config;
-  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount)
+  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip)
 } else {
   throw new Error("需要指定一个JSON配置文件")
 }

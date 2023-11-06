@@ -11,6 +11,15 @@ import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./e
 import { Cell3 } from "./Cell.mjs";
 import sharp from 'sharp';
 import md5 from 'blueimp-md5'
+import { createGzip, createUnzip } from 'zlib'
+import { pipeline } from "stream"
+import { promisify } from "node:util"
+import {
+  createReadStream,
+  createWriteStream
+} from "fs"
+
+const pipe = promisify(pipeline)
 
 const getNodeVertexCount = (node) => {
   const mesh = node.getMesh();
@@ -748,6 +757,68 @@ const combineBbox = (bbox1, bbox2) => {
   }
 }
 
+async function do_gzip(input, options) {
+  const gzip = createGzip(options);
+  const source = createReadStream(input);
+  const output = `${input}.gz`;
+  const destination = createWriteStream(output);
+  await pipe(source, gzip, destination);
+  await fse.remove(input);
+  await fse.rename(output, input)
+}
+
+const compress = async (rootPath, options) => {
+  const run = async (rootPath) => {
+    const files = await fse.readdir(rootPath)
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const filePath = path.join(rootPath, file);
+      // const desPath = path.join(file);
+      const stat = fse.statSync(filePath);
+
+      if (stat.isFile()) {
+        await do_gzip(filePath, options);
+      } else if (stat.isDirectory()) {
+        await run(filePath);
+      }
+    }
+  }
+
+  await run(rootPath)
+}
+
+async function do_ungzip(input, options) {
+  const ungzip = createUnzip(options);
+  const source = createReadStream(input);
+  const output = `${input}.gz`;
+  const destination = createWriteStream(output);
+  await pipe(source, ungzip, destination);
+  await fse.remove(input);
+  await fse.rename(output, input)
+}
+
+const uncompress = async (rootPath, options) => {
+  const run = async (rootPath) => {
+    const files = await fse.readdir(rootPath)
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const filePath = path.join(rootPath, file);
+      // const desPath = path.join(file);
+      const stat = fse.statSync(filePath);
+
+      if (stat.isFile()) {
+        await do_ungzip(filePath, options);
+      } else if (stat.isDirectory()) {
+        await run(filePath);
+      }
+    }
+  }
+
+  await run(rootPath)
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -764,5 +835,7 @@ export {
   paddingBuffer,
   guid,
   distanceSquared,
-  combineBbox
+  combineBbox,
+  compress,
+  uncompress
 }
