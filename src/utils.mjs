@@ -344,7 +344,26 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
       for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
         const node = nodes[nodeIndex];
         const primitives = node.getMesh().listPrimitives();
-        const extras = node.getExtras();
+        let extras = node.getExtras();
+        if (!extras && !extras.iid) {
+          const name = node.getName();
+          if (name) {
+            try {
+              extras = {};
+              for (let match of name.matchAll(/\((\w+:)(.*?)\)/g)) {
+                if (match) {
+                  if (match[1] === 'primitiveType') {
+                    extras[match[1]] = parseInt(match[2]);
+                  } else {
+                    extras[match[1]] = match[2];
+                  }
+                }
+              }
+            } catch (e) {
+              console.error(`Parse ${name} error`)
+            }
+          }
+        }
         // 第一步导出会保证有IID没有IID也会随机生成一个 16位字符长度的站场IID，再用-拼接一个随机字符串
         metadata.addItem({ iid: extras && extras.iid ? extras.iid : `iid-${guid()}`, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
         if (extras && extras.iid) {

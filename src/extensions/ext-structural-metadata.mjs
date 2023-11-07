@@ -51,6 +51,7 @@ export class EXTStructuralMetadata extends Extension {
               },
               primitiveType: {
                 // rs-cesium PrimitiveType Enum定义 Transparent = 0  BigScene = 1 SmallScene = 2 Unknown = 4 这个是这里定义的 rs 没有
+                // Unity 直接打过来的模型只有 0 和 1 的情况
                 type: "SCALAR",
                 componentType: "UINT8"
               }
