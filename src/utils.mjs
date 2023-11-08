@@ -2,14 +2,14 @@ import path from "path";
 import { writeFile } from "fs/promises";
 import fse from "fs-extra";
 import { NodeIO, Document, Accessor, Material, getBounds, TextureInfo } from "@gltf-transform/core";
-import { createTransform, prune, reorder, quantize, transformPrimitive, joinPrimitives, simplify, compressTexture } from "@gltf-transform/functions";
+import { createTransform, prune, reorder, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
 import { EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
 import { VertexAttributeSemantic, CompressType } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
-import sharp from 'sharp';
+// import sharp from 'sharp';
 import md5 from 'blueimp-md5'
 import { createGzip, createUnzip } from 'zlib'
 import { pipeline } from "stream"
@@ -442,11 +442,11 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 .setMetallicFactor(0.4)
                 .setDoubleSided(oldMaterial.getDoubleSided())
                 .setAlphaMode(oldMaterial.getAlphaMode());
-
-              await compressTexture(texture, {
-                encoder: sharp,
-                targetFormat: 'webp'
-              });
+              // unity的文件是webp不用转换 解决exe引用sharp文件问题
+              // await compressTexture(texture, {
+              //   encoder: sharp,
+              //   targetFormat: 'webp'
+              // });
 
               const textureInfo = existMaterial.getBaseColorTextureInfo(); // 未生效
               textureInfo.setMagFilter(TextureInfo.MagFilter.LINEAR)

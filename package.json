@@ -28,10 +28,6 @@
   },
   "bin": "./dist/runCreate3dtiles.js",
   "pkg": {
-    "assets": [
-      "node_modules/sharp/build/Release/**/*",
-      "node_modules/sharp/vendor/lib/**/*"
-    ],
     "outputPath": "bin/",
     "targets": [
       "node16-win"
