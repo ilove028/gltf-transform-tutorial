@@ -345,12 +345,12 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
         const node = nodes[nodeIndex];
         const primitives = node.getMesh().listPrimitives();
         let extras = node.getExtras();
-        if (!extras && !extras.iid) {
+        if (!extras || !extras.iid) {
           const name = node.getName();
           if (name) {
             try {
               extras = {};
-              for (let match of name.matchAll(/\((\w+:)(.*?)\)/g)) {
+              for (let match of name.matchAll(/\((\w+):(.*?)\)/g)) {
                 if (match) {
                   if (match[1] === 'primitiveType') {
                     extras[match[1]] = parseInt(match[2]);
