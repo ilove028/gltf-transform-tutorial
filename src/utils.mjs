@@ -838,6 +838,102 @@ const uncompress = async (rootPath, options) => {
   await run(rootPath)
 }
 
+/**
+ * Bigint转16位长度字符串
+ * @param {bigint} bigint 
+ */
+const bigint2String = (bigint) => {
+  const str = bigint.toString(16).toUpperCase();
+
+  return `${"0".repeat(16 - str.length)}${str}`;
+}
+
+const parseBound = async (path) => {
+  let offset = 0;
+  const buffer = await fse.readFile(path);
+  const readInt32LE = () => {
+    const res = buffer.readInt32LE(offset);
+    offset += 4;
+    return res;
+  }
+  const readFloatLE = () => {
+    const res = buffer.readFloatLE(offset);
+    offset += 4;
+    return res;
+  }
+  const readBigUInt64LE = () => {
+    const res = buffer.readBigUInt64LE(offset);
+    offset += 8;
+    return res;
+  }
+  const toString = (size) => {
+    const res = buffer.toString('utf-8', offset, offset + size);
+    offset += size;
+    return res;
+  }
+  const boundSize = readInt32LE();
+  const boundMap = {
+    size: 0
+  };
+
+  for (let i = 0; i < boundSize; i++) {
+    const bound = {
+      meshBoundCenter: undefined,
+      meshBoundSize: undefined,
+      meshBoundIdCount: 0,
+      boxIdList: [],
+      tags: []
+    };
+    bound.meshBoundCenter = {
+      x: readFloatLE(),
+      y: readFloatLE(),
+      z: readFloatLE()
+    }
+    bound.meshBoundSize = {
+      x: readFloatLE(),
+      y: readFloatLE(),
+      z: readFloatLE()
+    }
+    bound.meshBoundIdCount = readInt32LE()
+    for (let j = 0; j < bound.meshBoundIdCount; j++) {
+      const low = readBigUInt64LE();
+      const high = readBigUInt64LE();
+      bound.boxIdList.push(`${bigint2String(high)}${bigint2String(low)}`)
+    }
+    const tagSize = readInt32LE();
+    for (let k = 0; k < tagSize; k++) {
+      bound.tags.push(toString(readInt32LE()))
+    }
+    if (boundMap[bound.boxIdList[0]]) {
+      console.err(`${bound.boxIdList[0]} already exits.`)
+    } else if (bound.boxIdList[0]) {
+      boundMap[bound.boxIdList[0]] = bound;
+      boundMap.size += 1;
+    }
+  }
+
+  return boundMap;
+}
+
+const writeMeshBox = async (dest, paths) => {
+  let content = { size: 0 };
+  if (paths && paths.length > 0) {
+
+    for (let i = 0; i < paths.length; i++) {
+      const res = await parseBound(paths[i]);
+      content = Object.assign(
+        content,
+        res,
+        {
+          size: content.size + res.size
+        }
+      )
+    }
+  }
+
+  await writeFile(path.join(dest, "meshbox.json"), JSON.stringify(content, null, 0));
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -856,5 +952,7 @@ export {
   distanceSquared,
   combineBbox,
   compress,
-  uncompress
+  uncompress,
+  parseBound,
+  writeMeshBox
 }

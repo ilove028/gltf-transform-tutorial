@@ -1,7 +1,7 @@
 import { NodeIO } from "@gltf-transform/core";
 import { prune, flatten } from "@gltf-transform/functions";
 import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
-import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount, compress } from "./utils.mjs";
+import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount, compress, writeMeshBox } from "./utils.mjs";
 import { CompressType } from "./constant.mjs";
 import { writeFile, rm } from "fs/promises";
 import path from "path";
@@ -17,7 +17,7 @@ const getRootExtrasMatrix = (document) => {
     : create()
 }
 
-const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000, useGzip) => {
+const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000, useGzip, meshBox) => {
   if (useLod) {
     // 隐式暂时不支持Lod.
     useTilesImplicitTiling = false
@@ -102,6 +102,9 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
   console.log("Tileset done");
   await create3dtilesContent(output, document, cell, extension, useLod, compressType);
+  try {
+    await writeMeshBox(path.join(output, 'metadata'), meshBox)
+  } catch (e) {}
   if (useGzip) {
     await compress(output)
   }
@@ -242,9 +245,10 @@ if (process.argv[2]) {
     subtreeLevels = 3,
     useLod = false,
     compressType = 'EXT_meshopt_compression',
-    useGzip = true
+    useGzip = true,
+    meshBox = null
   } = config;
-  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip)
+  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox)
 } else {
   throw new Error("需要指定一个JSON配置文件")
 }
