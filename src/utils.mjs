@@ -316,6 +316,9 @@ const pruneMaterial = (compareFn) => {
 const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod, compressType = CompressType.EXTMeshoptCompression) => {
   const io = new NodeIO()
   .registerExtensions([EXTMeshFeatures, EXTStructuralMetadata, KHRTextureTransform]);
+  const metadataMap = {
+    size: 0
+  };
 
   if (compressType === CompressType.EXTMeshoptCompression) {
     io.registerExtensions([EXTMeshoptCompression])
@@ -368,9 +371,17 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
         metadata.addItem({ iid: extras && extras.iid ? extras.iid : `iid-${guid()}`, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
         if (extras && extras.iid) {
           // 获取node bound必须在transformPrimitive之前 因为转化后primitive 坐标会变换
-          const pt = path.join(filePath, "metadata");
-          fse.ensureDir(pt)
-          fse.writeJSONSync(path.join(pt, `${extras.iid}.json`), { box: getBboxBox(getBounds(node)) })
+          // const pt = path.join(filePath, "metadata");
+          // fse.ensureDir(pt)
+          // fse.writeJSONSync(path.join(pt, `${extras.iid}.json`), { box: getBboxBox(getBounds(node)) })
+          let exist = metadataMap[extras.iid];
+          // 这里使用数组保存主要因为后面submesh可能会出现多个模型对应一个iid 后面3dtilesfeature的映射也是iid对应feature数组
+          if (exist) {
+            exist.push({ box: getBboxBox(getBounds(node)) })
+          } else {
+            metadataMap[extras.iid] = [{ box: getBboxBox(getBounds(node)) }]
+            metadataMap.size += 1;
+          }
         }
         for (let j = 0; j < primitives.length; j++) {
           const primitive = primitives[j];
@@ -567,6 +578,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
   }
 
   await write(filePath, document, cell);
+  const pt = path.join(filePath, "metadata");
+  fse.ensureDir(pt)
+  fse.writeJSONSync(path.join(pt, "boundbox.json"), metadataMap)
 }
 
 const isMaterialLike = (aMaterial, bMaterial) => {
