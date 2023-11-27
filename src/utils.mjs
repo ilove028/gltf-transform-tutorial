@@ -580,7 +580,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
   await write(filePath, document, cell);
   const pt = path.join(filePath, "metadata");
   fse.ensureDir(pt)
-  fse.writeJSONSync(path.join(pt, "boundbox.json"), metadataMap)
+  fse.writeJSONSync(path.join(pt, "metadata.json"), metadataMap)
 }
 
 const isMaterialLike = (aMaterial, bMaterial) => {
