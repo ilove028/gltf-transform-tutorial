@@ -235,7 +235,14 @@ const extractFileName = (filePaths) => {
 // );
 
 if (process.argv[2]) {
-  const config = JSON.parse(fse.readFileSync(process.argv[2], { encoding: "utf-8" }));
+  let content;
+  if (/-c/i.test(process.argv[2]) && process.argv[3]) {
+    content = process.argv[3];
+  } else {
+    content = fse.readFileSync(process.argv[2], { encoding: "utf-8" }); 
+  }
+  fse.writeFileSync("./log", `content:\n${content}\n`)
+  const config = JSON.parse(content);
   const {
     input,
     output,
@@ -248,7 +255,9 @@ if (process.argv[2]) {
     useGzip = true,
     meshBox = null
   } = config;
-  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox)
+  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox).catch((e) => {
+    fse.appendFileSync("./log", e.stack);
+  })
 } else {
   throw new Error("需要指定一个JSON配置文件")
 }

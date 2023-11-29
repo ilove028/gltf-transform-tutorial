@@ -4,3 +4,4 @@ public
 *.exe
 dist
 bin
+log
