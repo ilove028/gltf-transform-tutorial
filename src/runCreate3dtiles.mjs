@@ -1,8 +1,8 @@
 import { NodeIO } from "@gltf-transform/core";
 import { prune, flatten } from "@gltf-transform/functions";
 import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
-import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount, compress, writeMeshBox } from "./utils.mjs";
-import { CompressType } from "./constant.mjs";
+import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount, compress, writeMeshBox, rename } from "./utils.mjs";
+import { GLB_RE, GLTF_RE } from "./constant.mjs";
 import { writeFile, rm } from "fs/promises";
 import path from "path";
 import glMatrix from "gl-matrix";
@@ -96,7 +96,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   // const cell = quadtree(document);
   // isNonuniform 非标准划 隐式还不支持 标准才支持隐式 
   const cell = octree(document, { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: maxVertexCount, isNonuniform: true });
-  const tileset = await create3dtiles(cell, extension, useTilesImplicitTiling, output, subtreeLevels, useLod);
+  const tileset = await create3dtiles(cell, useGzip ? /gltf/i.test(extension) ? GLTF_RE : GLB_RE : extension, useTilesImplicitTiling, output, subtreeLevels, useLod, useGzip);
   (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input);
   tileset.extras.matrix = mainMatrix.reduce((pre, cur) => { pre.push(cur); return pre; }, [])
   await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
@@ -106,6 +106,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     await writeMeshBox(path.join(output, 'metadata'), meshBox)
   } catch (e) {}
   if (useGzip) {
+    await rename(output);
     await compress(output)
   }
   console.log(

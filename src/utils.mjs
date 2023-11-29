@@ -6,7 +6,7 @@ import { createTransform, prune, reorder, transformPrimitive, joinPrimitives, si
 import { EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
-import { VertexAttributeSemantic, CompressType } from "./constant.mjs";
+import { VertexAttributeSemantic, CompressType, GLB_RE, GLTF_RE } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
 // import sharp from 'sharp';
@@ -800,6 +800,31 @@ async function do_gzip(input, options) {
   await fse.rename(output, input)
 }
 
+const rename = async (rootPath) => {
+  const run = async (rootPath) => {
+    const files = await fse.readdir(rootPath)
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const filePath = path.join(rootPath, file);
+      // const desPath = path.join(file);
+      const stat = fse.statSync(filePath);
+
+      if (stat.isFile()) {
+        if (/\.glb$/i.test(filePath)) {
+          await fse.rename(filePath, filePath.replace(/\.glb$/i, `.${GLB_RE}`));
+        } else if (/\.gltf$/i.test(filePath)) {
+          await fse.rename(filePath, filePath.replace(/\.gltf$/i, `.${GLTF_RE}`));
+        }
+      } else if (stat.isDirectory()) {
+        await run(filePath);
+      }
+    }
+  }
+
+  await run(rootPath)
+}
+
 const compress = async (rootPath, options) => {
   const run = async (rootPath) => {
     const files = await fse.readdir(rootPath)
@@ -968,5 +993,6 @@ export {
   compress,
   uncompress,
   parseBound,
-  writeMeshBox
+  writeMeshBox,
+  rename
 }

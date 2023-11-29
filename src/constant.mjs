@@ -71,7 +71,12 @@ const CompressType = {
   KHRDracoMeshCompression: KHRDracoMeshCompression.EXTENSION_NAME
 };
 
+const GLTF_RE = 'ytf';
+const GLB_RE = 'yb';
+
 export {
   VertexAttributeSemantic,
-  CompressType
+  CompressType,
+  GLB_RE,
+  GLTF_RE
 }
