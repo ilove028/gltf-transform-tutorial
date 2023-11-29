@@ -235,13 +235,14 @@ const extractFileName = (filePaths) => {
 // );
 
 if (process.argv[2]) {
+  const logPath = path.join(process.cwd(), "./log");
   let content;
   if (/-c/i.test(process.argv[2]) && process.argv[3]) {
     content = process.argv[3];
   } else {
     content = fse.readFileSync(process.argv[2], { encoding: "utf-8" }); 
   }
-  fse.writeFileSync("./log", `content:\n${content}\n`)
+  fse.writeFileSync(logPath, `content:\n${content}\n`)
   const config = JSON.parse(content);
   const {
     input,
@@ -256,7 +257,7 @@ if (process.argv[2]) {
     meshBox = null
   } = config;
   run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox).catch((e) => {
-    fse.appendFileSync("./log", e.stack);
+    fse.appendFileSync(logPath, e.stack);
   })
 } else {
   throw new Error("需要指定一个JSON配置文件")
