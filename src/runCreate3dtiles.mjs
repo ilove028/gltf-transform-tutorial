@@ -8,6 +8,7 @@ import path from "path";
 import glMatrix from "gl-matrix";
 import fse from "fs-extra";
 import { KHRTextureTransform } from '@gltf-transform/extensions';
+import { version } from "../package.json";
 
 const { mat4: { create, multiply, invert } } = glMatrix;
 const getRootExtrasMatrix = (document) => {
@@ -243,7 +244,13 @@ if (process.argv[2]) {
   } else {
     content = fse.readFileSync(process.argv[2], { encoding: "utf-8" }); 
   }
-  fse.writeFileSync(logPath, `content:\n${content}\n`)
+  fse.writeFileSync(
+    logPath,
+    `version:
+${version}
+content:
+${content}`
+  )
   const config = JSON.parse(content);
   const {
     input,
