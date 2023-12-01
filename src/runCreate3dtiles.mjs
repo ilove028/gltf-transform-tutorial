@@ -1,7 +1,7 @@
 import { NodeIO } from "@gltf-transform/core";
 import { prune, flatten } from "@gltf-transform/functions";
 import { noUniformQuadtree, octree, quadtree } from "./spatialDivision.mjs";
-import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount, compress, writeMeshBox, rename } from "./utils.mjs";
+import { create3dtiles, pruneMaterial, create3dtilesContent, getNodesVertexCount, compress, writeMeshBox, rename, useGpuInstancing } from "./utils.mjs";
 import { GLB_RE, GLTF_RE } from "./constant.mjs";
 import { writeFile, rm } from "fs/promises";
 import path from "path";
@@ -78,7 +78,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
       curScene.listChildren().forEach(node => scene.addChild(node));
     }
   }
-
+  useGpuInstancing(document);
   await document.transform(
     // pruneMaterial((existMaterial, material) => {
     //   const a = existMaterial.getBaseColorFactor();

@@ -66,6 +66,47 @@ const VertexAttributeSemantic = {
   FEATURE_ID: "_FEATURE_ID",
 };
 
+/**
+ * An enum describing the built-in instance attribute semantics.
+ *
+ * @enum {string}
+ *
+ * @private
+ */
+const InstanceAttributeSemantic = {
+  /**
+   * Per-instance translation.
+   *
+   * @type {string}
+   * @constant
+   */
+  TRANSLATION: "TRANSLATION",
+
+  /**
+   * Per-instance rotation.
+   *
+   * @type {string}
+   * @constant
+   */
+  ROTATION: "ROTATION",
+
+  /**
+   * Per-instance scale.
+   *
+   * @type {string}
+   * @constant
+   */
+  SCALE: "SCALE",
+
+  /**
+   * Per-instance feature ID.
+   *
+   * @type {string}
+   * @constant
+   */
+  FEATURE_ID: "_FEATURE_ID",
+};
+
 const CompressType = {
   EXTMeshoptCompression: EXTMeshoptCompression.EXTENSION_NAME,
   KHRDracoMeshCompression: KHRDracoMeshCompression.EXTENSION_NAME
@@ -76,6 +117,7 @@ const GLB_RE = 'mb';
 
 export {
   VertexAttributeSemantic,
+  InstanceAttributeSemantic,
   CompressType,
   GLB_RE,
   GLTF_RE

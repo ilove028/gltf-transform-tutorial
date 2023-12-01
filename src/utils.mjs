@@ -3,10 +3,10 @@ import { writeFile } from "fs/promises";
 import fse from "fs-extra";
 import { NodeIO, Document, Accessor, Material, getBounds, TextureInfo } from "@gltf-transform/core";
 import { createTransform, prune, reorder, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
-import { EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
+import { EXTMeshGPUInstancing, EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
-import { VertexAttributeSemantic, CompressType, GLB_RE, GLTF_RE } from "./constant.mjs";
+import { VertexAttributeSemantic, InstanceAttributeSemantic, CompressType, GLB_RE, GLTF_RE } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
 // import sharp from 'sharp';
@@ -344,150 +344,155 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
       const metadata = metadataExt.createMeatdata();
 
       newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata);
+      let featureId = 0;
       for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+        /**
+         * @type {import("@gltf-transform/core").Node}
+         */
         const node = nodes[nodeIndex];
-        const primitives = node.getMesh().listPrimitives();
-        let extras = node.getExtras();
-        if (!extras || !extras.iid) {
-          const name = node.getName();
-          if (name) {
-            try {
-              extras = {};
-              for (let match of name.matchAll(/\((\w+):(.*?)\)/g)) {
-                if (match) {
-                  if (match[1] === 'primitiveType') {
-                    extras[match[1]] = parseInt(match[2]);
-                  } else {
-                    extras[match[1]] = match[2];
-                  }
-                }
-              }
-            } catch (e) {
-              console.error(`Parse ${name} error`)
-            }
-          }
-        }
-        // 第一步导出会保证有IID没有IID也会随机生成一个 16位字符长度的站场IID，再用-拼接一个随机字符串
-        metadata.addItem({ iid: extras && extras.iid ? extras.iid : `iid-${guid()}`, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
-        if (extras && extras.iid) {
-          // 获取node bound必须在transformPrimitive之前 因为转化后primitive 坐标会变换
-          // const pt = path.join(filePath, "metadata");
-          // fse.ensureDir(pt)
-          // fse.writeJSONSync(path.join(pt, `${extras.iid}.json`), { box: getBboxBox(getBounds(node)) })
-          let exist = metadataMap[extras.iid];
-          // 这里使用数组保存主要因为后面submesh可能会出现多个模型对应一个iid 后面3dtilesfeature的映射也是iid对应feature数组
-          if (exist) {
-            exist.push({ box: getBboxBox(getBounds(node)) })
-          } else {
-            metadataMap[extras.iid] = [{ box: getBboxBox(getBounds(node)) }]
-            metadataMap.size += 1;
-          }
-        }
-        for (let j = 0; j < primitives.length; j++) {
-          const primitive = primitives[j];
-          transformPrimitive(primitive, node.getWorldMatrix());
-          const newPrimitive = newDocument.createPrimitive();
-          const oldMaterial = primitive.getMaterial();
-          const indeiceAccessor = primitive.getIndices();
+        if (node.getExtension(EXTMeshGPUInstancing.EXTENSION_NAME)) {
+          // 如果是实例化不进行合并
+          const { iids, primitiveTypes } = node.getExtras();
 
-          indeiceAccessor && newPrimitive.setIndices(
-            newDocument.createAccessor()
-              .setArray(indeiceAccessor.getArray())
-              .setType(indeiceAccessor.getType())
-          )
-
-          primitive.listSemantics().forEach((semantic) => {
-            if (semantic === VertexAttributeSemantic.POSITION || semantic === VertexAttributeSemantic.NORMAL || semantic === VertexAttributeSemantic.TEXCOORD_0) {
-              const oldAccessor = primitive.getAttribute(semantic);
-
-              newPrimitive.setAttribute(
-                semantic,
-                newDocument.createAccessor()
-                  .setArray(oldAccessor.getArray())
-                  .setType(oldAccessor.getType())
-                  .setBuffer(buffer)
-                  .setNormalized(semantic === VertexAttributeSemantic.NORMAL)
-              )
-            } else {
-              console.error(`${semantic} attribute not handle.`)
-            }
-          })
-
-          const count = newPrimitive.getAttribute(VertexAttributeSemantic.POSITION).getCount();
-          newPrimitive.setAttribute(
-            `${VertexAttributeSemantic.FEATURE_ID}_0`,
-            newDocument.createAccessor()
+          iids.forEach((iid, index) => {
+            const primitiveType = primitiveTypes[index];
+            metadata.addItem({ iid: iid ? iid : `iid-${guid()}`, primitiveType: typeof primitiveType === "number" ? primitiveType : 4 });
+          });
+          node.getExtension(EXTMeshGPUInstancing).setAttribute(
+            `${InstanceAttributeSemantic.FEATURE_ID}_0`,
+            document.createAccessor()
               .setArray(
-                // https://github.com/CesiumGS/glTF/tree/3d-tiles-next/extensions/2.0/Vendor/EXT_mesh_features 大小限制
-                nodes.length < Math.pow(2, 16)
-                ? new Uint16Array(Array(count).fill(nodeIndex))
-                : new Float32Array(Array(count).fill(nodeIndex))
+                new Uint16Array(Array.from({ length: iids.length }).map((_, i) => i + featureId))
               )
               .setType(Accessor.Type.SCALAR)
-              .setBuffer(buffer)
-          );
-
-          let existMaterial;
-          let existMesh;
-          materialMap.forEach((mesh, m) => {
-            if (!existMaterial && isMaterialLike(m, oldMaterial)) {
-              existMaterial = m;
-              existMesh = mesh;
+          )
+          featureId += iids.length;
+        } else {
+          const primitives = node.getMesh().listPrimitives();
+          const extras = getExtras(node);
+          // 第一步导出会保证有IID没有IID也会随机生成一个 16位字符长度的站场IID，再用-拼接一个随机字符串
+          metadata.addItem({ iid: extras && extras.iid ? extras.iid : `iid-${guid()}`, primitiveType: extras && typeof extras.primitiveType === "number" ? extras.primitiveType : 4 });
+          if (extras && extras.iid) {
+            // 获取node bound必须在transformPrimitive之前 因为转化后primitive 坐标会变换
+            // const pt = path.join(filePath, "metadata");
+            // fse.ensureDir(pt)
+            // fse.writeJSONSync(path.join(pt, `${extras.iid}.json`), { box: getBboxBox(getBounds(node)) })
+            let exist = metadataMap[extras.iid];
+            // 这里使用数组保存主要因为后面submesh可能会出现多个模型对应一个iid 后面3dtilesfeature的映射也是iid对应feature数组
+            if (exist) {
+              exist.push({ box: getBboxBox(getBounds(node)) })
+            } else {
+              metadataMap[extras.iid] = [{ box: getBboxBox(getBounds(node)) }]
+              metadataMap.size += 1;
             }
-          });
-
-          if (!existMesh) {
-            const oldTexture = oldMaterial.getBaseColorTexture();
-            if(oldTexture){
-              const image = oldTexture.getImage();
-              const md5Value = md5(image);
-              const md5Url = md5Value+'.webp';
-              const texture = newDocument.createTexture(oldTexture.getName())
-              .setImage(image)
-              .setURI(md5Url)
-
-              existMaterial = newDocument.createMaterial(oldMaterial.getName())
-                .setBaseColorFactor(oldMaterial.getBaseColorFactor())
-                .setBaseColorTexture(texture)
-                .setRoughnessFactor(0.02)
-                .setMetallicFactor(0.4)
-                .setDoubleSided(oldMaterial.getDoubleSided())
-                .setAlphaMode(oldMaterial.getAlphaMode());
-              // unity的文件是webp不用转换 解决exe引用sharp文件问题
-              // await compressTexture(texture, {
-              //   encoder: sharp,
-              //   targetFormat: 'webp'
-              // });
-
-              const textureInfo = existMaterial.getBaseColorTextureInfo(); // 未生效
-              textureInfo.setMagFilter(TextureInfo.MagFilter.LINEAR)
-              textureInfo.setMinFilter(TextureInfo.MinFilter.LINEAR)
-
-              //贴图重复值不为1时
-              const scale = oldMaterial.getBaseColorTextureInfo().getExtension('KHR_texture_transform');
-              if (scale) {
-                const transformExtension = newDocument.createExtension(KHRTextureTransform)
-                  .setRequired(true);
-                const transform = transformExtension.createTransform()
-                  .setScale(scale.getScale());
-                textureInfo.setExtension('KHR_texture_transform', transform);
-              }
-            }else{
-              existMaterial = newDocument
-                .createMaterial(oldMaterial.getName())
-                .setBaseColorFactor(oldMaterial.getBaseColorFactor())
-                .setRoughnessFactor(0.02)
-                .setMetallicFactor(0.4)
-                .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
-                // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
-                // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
-                .setDoubleSided(oldMaterial.getDoubleSided());
-            }
-            existMesh = newDocument.createMesh();
-            materialMap.set(existMaterial, existMesh);
           }
-          newPrimitive.setMaterial(existMaterial);
-          existMesh.addPrimitive(newPrimitive);
+          for (let j = 0; j < primitives.length; j++) {
+            const primitive = primitives[j];
+            transformPrimitive(primitive, node.getWorldMatrix());
+            const newPrimitive = newDocument.createPrimitive();
+            const oldMaterial = primitive.getMaterial();
+            const indeiceAccessor = primitive.getIndices();
+
+            indeiceAccessor && newPrimitive.setIndices(
+              newDocument.createAccessor()
+                .setArray(indeiceAccessor.getArray())
+                .setType(indeiceAccessor.getType())
+            )
+
+            primitive.listSemantics().forEach((semantic) => {
+              if (semantic === VertexAttributeSemantic.POSITION || semantic === VertexAttributeSemantic.NORMAL || semantic === VertexAttributeSemantic.TEXCOORD_0) {
+                const oldAccessor = primitive.getAttribute(semantic);
+
+                newPrimitive.setAttribute(
+                  semantic,
+                  newDocument.createAccessor()
+                    .setArray(oldAccessor.getArray())
+                    .setType(oldAccessor.getType())
+                    .setBuffer(buffer)
+                    .setNormalized(semantic === VertexAttributeSemantic.NORMAL)
+                )
+              } else {
+                console.error(`${semantic} attribute not handle.`)
+              }
+            })
+
+            const count = newPrimitive.getAttribute(VertexAttributeSemantic.POSITION).getCount();
+            newPrimitive.setAttribute(
+              `${VertexAttributeSemantic.FEATURE_ID}_0`,
+              newDocument.createAccessor()
+                .setArray(
+                  // https://github.com/CesiumGS/glTF/tree/3d-tiles-next/extensions/2.0/Vendor/EXT_mesh_features 大小限制
+                  // nodes.length < Math.pow(2, 16)
+                  // ? new Uint16Array(Array(count).fill(nodeIndex))
+                  new Float32Array(Array(count).fill(featureId))
+                )
+                .setType(Accessor.Type.SCALAR)
+                .setBuffer(buffer)
+            );
+
+            let existMaterial;
+            let existMesh;
+            materialMap.forEach((mesh, m) => {
+              if (!existMaterial && isMaterialLike(m, oldMaterial)) {
+                existMaterial = m;
+                existMesh = mesh;
+              }
+            });
+
+            if (!existMesh) {
+              const oldTexture = oldMaterial.getBaseColorTexture();
+              if(oldTexture){
+                const image = oldTexture.getImage();
+                const md5Value = md5(image);
+                const md5Url = md5Value+'.webp';
+                const texture = newDocument.createTexture(oldTexture.getName())
+                .setImage(image)
+                .setURI(md5Url)
+
+                existMaterial = newDocument.createMaterial(oldMaterial.getName())
+                  .setBaseColorFactor(oldMaterial.getBaseColorFactor())
+                  .setBaseColorTexture(texture)
+                  .setRoughnessFactor(0.02)
+                  .setMetallicFactor(0.4)
+                  .setDoubleSided(oldMaterial.getDoubleSided())
+                  .setAlphaMode(oldMaterial.getAlphaMode());
+                // unity的文件是webp不用转换 解决exe引用sharp文件问题
+                // await compressTexture(texture, {
+                //   encoder: sharp,
+                //   targetFormat: 'webp'
+                // });
+
+                const textureInfo = existMaterial.getBaseColorTextureInfo(); // 未生效
+                textureInfo.setMagFilter(TextureInfo.MagFilter.LINEAR)
+                textureInfo.setMinFilter(TextureInfo.MinFilter.LINEAR)
+
+                //贴图重复值不为1时
+                const scale = oldMaterial.getBaseColorTextureInfo().getExtension('KHR_texture_transform');
+                if (scale) {
+                  const transformExtension = newDocument.createExtension(KHRTextureTransform)
+                    .setRequired(true);
+                  const transform = transformExtension.createTransform()
+                    .setScale(scale.getScale());
+                  textureInfo.setExtension('KHR_texture_transform', transform);
+                }
+              }else{
+                existMaterial = newDocument
+                  .createMaterial(oldMaterial.getName())
+                  .setBaseColorFactor(oldMaterial.getBaseColorFactor())
+                  .setRoughnessFactor(0.02)
+                  .setMetallicFactor(0.4)
+                  .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
+                  // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
+                  // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
+                  .setDoubleSided(oldMaterial.getDoubleSided());
+              }
+              existMesh = newDocument.createMesh();
+              materialMap.set(existMaterial, existMesh);
+            }
+            newPrimitive.setMaterial(existMaterial);
+            existMesh.addPrimitive(newPrimitive);
+          }
+          featureId++;
         }
       };
 
@@ -973,6 +978,122 @@ const writeMeshBox = async (dest, paths) => {
   await writeFile(path.join(dest, "meshbox.json"), JSON.stringify(content, null, 0));
 }
 
+/**
+ * @param {import("@gltf-transform/core").Document} document 
+ */
+const useGpuInstancing = (document) => {
+  let scene = document.getRoot().getDefaultScene();
+  if (!scene) {
+    scene = document.getRoot().listScenes()[0]
+  }
+
+  if (scene) {
+    /**
+     * @typedef {import("@gltf-transform/core").Mesh} Mesh
+     * @typedef {import("@gltf-transform/core").Node} Node
+     * @type {Map<Mesh, Array<Node>>}
+     */
+    const meshMap = new Map();
+    scene.listChildren().forEach((node) => {
+      const extension = node.getExtension(EXTMeshGPUInstancing.EXTENSION_NAME);
+
+      if (!extension) {
+        const mesh = node.getMesh();
+        const children = node.listChildren(); {
+          if (mesh && (!children || children.length === 0)) {
+            const nodes = meshMap.get(mesh);
+
+            if (nodes) {
+              nodes.push(node);
+            } else {
+              meshMap.set(mesh, [node]);
+            }
+          }
+        }
+      }
+    });
+
+    const batchExtension = document.createExtension(EXTMeshGPUInstancing).setRequired(true);
+    meshMap.forEach((nodes, mesh) => {
+      if (nodes.length > 1) {
+        const iids = [];
+        const primitiveTypes = [];
+        const translations = [];
+        const scales = [];
+        const rotations = [];
+
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i];
+          const extras = getExtras(node);
+
+          iids.push(extras.iid);
+          primitiveTypes.push(extras.primitiveType);
+          translations.push(node.getTranslation());
+          scales.push(node.getScale());
+          rotations.push(node.getRotation());
+          if (i > 0) {
+            scene.removeChild(node);
+          }
+        }
+        const first = nodes[0];
+        const extras = first.getExtras();
+
+        first.setExtras(Object.assign({}, extras, { iids, primitiveTypes }))
+        first.setExtension(
+          EXTMeshGPUInstancing.EXTENSION_NAME,
+          batchExtension.createInstancedMesh()
+            .setAttribute(
+              InstanceAttributeSemantic.TRANSLATION,
+              document.createAccessor()
+                .setArray(new Float32Array(translations.map(v => v).flat()))
+                .setType(Accessor.Type.VEC3)
+            )
+            .setAttribute(
+              InstanceAttributeSemantic.ROTATION,
+              document.createAccessor()
+                .setArray(new Float32Array(rotations.map(v => v).flat()))
+                .setType(Accessor.Type.VEC4)
+            )
+            .setAttribute(
+              InstanceAttributeSemantic.SCALE,
+              document.createAccessor()
+                .setArray(new Float32Array(scales.map(v => v).flat()))
+                .setType(Accessor.Type.VEC3)
+            )
+        )
+      }
+    })
+  }
+}
+
+/**
+ * @param {import("@gltf-transform/core").Node} node
+ */
+const getExtras = (node) => {
+  let extras = node.getExtras();
+  if (!extras || !extras.iid) {
+    const name = node.getName();
+    if (name) {
+      try {
+        extras = {};
+        for (let match of name.matchAll(/\((\w+):(.*?)\)/g)) {
+          if (match) {
+            if (match[1] === 'primitiveType') {
+              extras[match[1]] = parseInt(match[2]);
+            } else {
+              extras[match[1]] = match[2];
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`Parse ${name} error`)
+      }
+    }
+  }
+
+  return extras;
+}
+
 export {
   getNodeVertexCount,
   getNodesVertexCount,
@@ -994,5 +1115,7 @@ export {
   uncompress,
   parseBound,
   writeMeshBox,
-  rename
+  rename,
+  getExtras,
+  useGpuInstancing
 }
