@@ -7,7 +7,7 @@ import { EXTMeshGPUInstancing, EXTMeshoptCompression, KHRDracoMeshCompression, K
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
 import { VertexAttributeSemantic, InstanceAttributeSemantic, CompressType, GLB_RE, GLTF_RE } from "./constant.mjs";
-import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling } from "./extensions/index.mjs";
+import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling, EXTInstanceFeatures } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
 // import sharp from 'sharp';
 import md5 from 'blueimp-md5'
@@ -315,7 +315,7 @@ const pruneMaterial = (compareFn) => {
 
 const create3dtilesContent = async (filePath, document, cell, extension = "glb", useLod, compressType = CompressType.EXTMeshoptCompression) => {
   const io = new NodeIO()
-  .registerExtensions([EXTMeshFeatures, EXTStructuralMetadata, KHRTextureTransform]);
+  .registerExtensions([EXTMeshFeatures, EXTStructuralMetadata, KHRTextureTransform, EXTMeshGPUInstancing, EXTInstanceFeatures]);
   const metadataMap = {
     size: 0
   };
@@ -340,8 +340,10 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
       const buffer = newDocument.createBuffer();
       const scene = newDocument.createScene()
       const meshFeatures = newDocument.createExtension(EXTMeshFeatures);
+      const instanceFeatures = newDocument.createExtension(EXTInstanceFeatures);
       const metadataExt = newDocument.createExtension(EXTStructuralMetadata);
       const metadata = metadataExt.createMeatdata();
+      let batchExtension;
 
       newDocument.getRoot().setExtension(EXTStructuralMetadata.EXTENSION_NAME, metadata);
       let featureId = 0;
@@ -351,6 +353,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
          */
         const node = nodes[nodeIndex];
         if (node.getExtension(EXTMeshGPUInstancing.EXTENSION_NAME)) {
+          if (!batchExtension) {
+            batchExtension = newDocument.createExtension(EXTMeshGPUInstancing).setRequired(true);
+          }
           // 如果是实例化不进行合并
           const { iids, primitiveTypes } = node.getExtras();
 
@@ -358,14 +363,90 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
             const primitiveType = primitiveTypes[index];
             metadata.addItem({ iid: iid ? iid : `iid-${guid()}`, primitiveType: typeof primitiveType === "number" ? primitiveType : 4 });
           });
-          node.getExtension(EXTMeshGPUInstancing).setAttribute(
+          const oldExt = node.getExtension(EXTMeshGPUInstancing.EXTENSION_NAME);
+          const instanceMesh = batchExtension.createInstancedMesh();
+          oldExt.listSemantics().forEach((semantic) => {
+            const accessor = oldExt.getAttribute(semantic);
+
+            instanceMesh.setAttribute(
+              semantic,
+              newDocument.createAccessor()
+                .setArray(accessor.getArray())
+                .setType(accessor.getType())
+                .setBuffer(buffer)
+            )
+          });
+          instanceMesh.setAttribute(
             `${InstanceAttributeSemantic.FEATURE_ID}_0`,
-            document.createAccessor()
+            newDocument.createAccessor()
               .setArray(
                 new Uint16Array(Array.from({ length: iids.length }).map((_, i) => i + featureId))
               )
               .setType(Accessor.Type.SCALAR)
           )
+          const newNode = newDocument.createNode()
+          .setExtension(
+            EXTMeshGPUInstancing.EXTENSION_NAME,
+            instanceMesh
+          )
+          .setExtension(
+            EXTInstanceFeatures.EXTENSION_NAME,
+            instanceFeatures.createFeatures([{ featureCount: iids.length, attribute: 0, propertyTable: 0 }])
+          );
+          const newMesh = newDocument.createMesh();
+          node.getMesh().listPrimitives().forEach((primitive) => {
+            const newPrimitive = newDocument.createPrimitive();
+            newMesh.addPrimitive(newPrimitive);
+            primitive.listSemantics().forEach((semantic) => {
+              const assessor = primitive.getAttribute(semantic);
+              newPrimitive.setAttribute(
+                semantic,
+                newDocument.createAccessor()
+                  .setArray(assessor.getArray())
+                  .setType(assessor.getType())
+                  .setBuffer(buffer)
+              )
+            });
+
+            const indexAccessor = primitive.getIndices()
+            if (indexAccessor) {
+              newPrimitive.setIndices(
+                newDocument.createAccessor()
+                  .setArray(indexAccessor.getArray())
+                  .setType(indexAccessor.getType())
+                  .setBuffer(buffer)
+              )
+            }
+
+            const material = primitive.getMaterial();
+
+            if (material) {
+              const newMaterial = newDocument.createMaterial();
+              const baseColorTexture = material.getBaseColorTexture();
+
+              newPrimitive.setMaterial(newMaterial);
+              if (baseColorTexture) {
+                newDocument.createMaterial(material.getName())
+                  .setBaseColorFactor(material.getBaseColorFactor())
+                  .setBaseColorTexture(material)
+                  .setRoughnessFactor(0.02)
+                  .setMetallicFactor(0.4)
+                  .setDoubleSided(material.getDoubleSided())
+                  .setAlphaMode(material.getAlphaMode());
+              } else {
+                newDocument.createMaterial(material.getName())
+                  .setBaseColorFactor(material.getBaseColorFactor())
+                  .setRoughnessFactor(0.02)
+                  .setMetallicFactor(0.4)
+                  .setAlphaMode(material.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
+                  // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
+                  // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
+                  .setDoubleSided(material.getDoubleSided());
+              }
+            }
+          })
+          newNode.setMesh(newMesh)
+          scene.addChild(newNode);
           featureId += iids.length;
         } else {
           const primitives = node.getMesh().listPrimitives();
