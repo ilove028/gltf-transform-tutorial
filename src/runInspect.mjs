@@ -1,4 +1,5 @@
-import { NodeIO, getBounds } from "@gltf-transform/core";
+import { NodeIO } from "@gltf-transform/core";
+import { getBounds } from "./getBounds.mjs";
 import glMatrix from "gl-matrix";
 
 const { vec3: { transformMat4 } } = glMatrix;

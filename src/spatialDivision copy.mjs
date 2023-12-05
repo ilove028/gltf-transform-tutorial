@@ -1,4 +1,5 @@
-import { Accessor, getBounds } from "@gltf-transform/core";
+import { Accessor } from "@gltf-transform/core";
+import { getBounds } from "./getBounds.mjs";
 import { distance, getNodesVertexCount, getNodeVertexCount, isBboxContain } from "./utils.mjs"
 import Cell, { Cell3 } from "./Cell.mjs";
 

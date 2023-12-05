@@ -1,11 +1,12 @@
 import path from "path";
 import { writeFile } from "fs/promises";
 import fse from "fs-extra";
-import { NodeIO, Document, Accessor, Material, getBounds, TextureInfo } from "@gltf-transform/core";
+import { NodeIO, Document, Accessor, Material, TextureInfo } from "@gltf-transform/core";
 import { createTransform, prune, reorder, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
 import { EXTMeshGPUInstancing, EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
+import { getBounds } from "./getBounds.mjs";
 import { VertexAttributeSemantic, InstanceAttributeSemantic, CompressType, GLB_RE, GLTF_RE } from "./constant.mjs";
 import { EXTMeshFeatures, EXTStructuralMetadata, TilesImplicitTiling, EXTInstanceFeatures } from "./extensions/index.mjs";
 import { Cell3 } from "./Cell.mjs";
@@ -383,6 +384,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 new Uint16Array(Array.from({ length: iids.length }).map((_, i) => i + featureId))
               )
               .setType(Accessor.Type.SCALAR)
+              .setBuffer(buffer)
           )
           const newNode = newDocument.createNode()
           .setExtension(
@@ -426,7 +428,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
 
               newPrimitive.setMaterial(newMaterial);
               if (baseColorTexture) {
-                newDocument.createMaterial(material.getName())
+                newMaterial
                   .setBaseColorFactor(material.getBaseColorFactor())
                   .setBaseColorTexture(material)
                   .setRoughnessFactor(0.02)
@@ -434,7 +436,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                   .setDoubleSided(material.getDoubleSided())
                   .setAlphaMode(material.getAlphaMode());
               } else {
-                newDocument.createMaterial(material.getName())
+                newMaterial
                   .setBaseColorFactor(material.getBaseColorFactor())
                   .setRoughnessFactor(0.02)
                   .setMetallicFactor(0.4)
