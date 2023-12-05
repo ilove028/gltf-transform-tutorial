@@ -363,6 +363,14 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           iids.forEach((iid, index) => {
             const primitiveType = primitiveTypes[index];
             metadata.addItem({ iid: iid ? iid : `iid-${guid()}`, primitiveType: typeof primitiveType === "number" ? primitiveType : 4 });
+            let exist = metadataMap[iid];
+            // 这里使用数组保存主要因为后面submesh可能会出现多个模型对应一个iid 后面3dtilesfeature的映射也是iid对应feature数组
+            if (exist) {
+              exist.push({ box: getBboxBox(getBounds(node, index)) })
+            } else {
+              metadataMap[iid] = [{ box: getBboxBox(getBounds(node, index)) }]
+              metadataMap.size += 1;
+            }
           });
           const oldExt = node.getExtension(EXTMeshGPUInstancing.EXTENSION_NAME);
           const instanceMesh = batchExtension.createInstancedMesh();

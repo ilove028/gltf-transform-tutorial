@@ -17,10 +17,11 @@ const { vec3: { transformMat4 }, mat4: { fromRotationTranslationScale, create, m
 /**
  * @typedef {import("@gltf-transform/core").Node} Node
  * @typedef {import("@gltf-transform/core").Scene} Scene
- * @param {Node|Scene} node 
+ * @param {Node|Scene} node
+ * @param {number|undefined} instanceIndex 实例序号 如果node是实例化 获取第几个实例bound 才传入
  * @returns 
  */
-export function getBounds(node) {
+export function getBounds(node, instanceIndex) {
 	const resultBounds = createBounds();
 	const parents = node.propertyType === PropertyType.NODE ? [node] : node.listChildren();
 
@@ -49,9 +50,13 @@ export function getBounds(node) {
 				const scaleAccessor = ext.getAttribute(InstanceAttributeSemantic.SCALE);
 				const scaleCount = scaleAccessor ? scaleAccessor.getCount() : 0;
 
-				const count = Math.max(translationCount, rotationCount, scaleCount);
-
-				for (let i = 0; i < count; i++) {
+				let i = 0;
+				let count = Math.max(translationCount, rotationCount, scaleCount);
+				if (typeof instanceIndex === "number") {
+					i = instanceIndex;
+					count = instanceIndex + 1;
+				}
+				for (; i < count; i++) {
 					const translation = translationAccessor ? translationAccessor.getElement(i, []) : [0, 0, 0];
 					const rotation = rotationAccessor ? rotationAccessor.getElement(i, []) : [0, 0, 0, 1];
 					const scale = scaleAccessor ? scaleAccessor.getElement(i, []) : [1, 1, 1];
