@@ -381,7 +381,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
             `${InstanceAttributeSemantic.FEATURE_ID}_0`,
             newDocument.createAccessor()
               .setArray(
-                new Uint16Array(Array.from({ length: iids.length }).map((_, i) => i + featureId))
+                new Float32Array(Array.from({ length: iids.length }).map((_, i) => i + featureId))
               )
               .setType(Accessor.Type.SCALAR)
               .setBuffer(buffer)
