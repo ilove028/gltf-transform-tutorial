@@ -205,7 +205,9 @@ const getBboxsMaxGeometricError2 = (bboxs) => {
 const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subtreeLevels, useLod) => {
   const tileset = {
     asset: {
-      version: "1.1"
+      version: "1.1",
+      // TODO 这里最好根据生成文件hash做version
+      tilesetVersion: Math.random().toString(16).slice(2)
     },
     geometricError: getBboxsMaxGeometricError2(cell.bbox) * (useLod ? 1 : 1),
     root: null
