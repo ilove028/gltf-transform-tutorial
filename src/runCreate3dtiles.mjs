@@ -11,7 +11,7 @@ import { KHRTextureTransform } from '@gltf-transform/extensions';
 // import { version } from "../package.json";
 // TODO 这里ES6引用json会报错
 const version = "1.0.0";
-const { mat4: { create, multiply, invert } } = glMatrix;
+const { mat4: { create, multiply, invert, getTranslation } } = glMatrix;
 const getRootExtrasMatrix = (document) => {
   const extras = document.getRoot().getExtras();
   return extras && extras.matrix
@@ -39,10 +39,18 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
     }
 
     document = docs[0];
-    mainMatrix = getRootExtrasMatrix(document)
+    const tmpMatrix = getRootExtrasMatrix(document);
+    // 修正因为矩阵运算精度丢失问题 位移有很大量 变换到相对小的位移进行处理减小误差
+    const translation = getTranslation([0, 0, 0], tmpMatrix); // 没有使用vec3 create 因为默认使用 float32会丢失精度
+    mainMatrix = tmpMatrix.slice();
+    mainMatrix[12] = mainMatrix[13] = mainMatrix[14] = 0;
     for (let i = 1; i < docs.length; i++) {
       // 对除了主document的其它所有doc的node做变换到 主doc坐标系下 基于已经将多个模型放置好
-      const curMatrix = getRootExtrasMatrix(docs[i]);
+      let tmpMat = getRootExtrasMatrix(docs[i]);
+      const curMatrix = tmpMat.slice();
+      curMatrix[12] -= translation[0];
+      curMatrix[13] -= translation[1];
+      curMatrix[14] -= translation[2];
       const mat = multiply(
         create(),
         invert(create(), mainMatrix),
