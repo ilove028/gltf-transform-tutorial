@@ -1168,7 +1168,9 @@ const getExtras = (node) => {
     const name = node.getName();
     if (name) {
       try {
-        extras = {};
+        extras = {
+          primitiveType: extras.primitiveType
+        };
         for (let match of name.matchAll(/\((\w+):(.*?)\)/g)) {
           if (match) {
             if (match[1] === 'primitiveType') {
