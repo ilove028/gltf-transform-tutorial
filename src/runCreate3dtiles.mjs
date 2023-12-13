@@ -108,7 +108,7 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   const cell = octree(document, { maxLevel: Infinity, maxNodeSize: 1, maxRadius: 0.5, maxVertexCount: maxVertexCount, isNonuniform: true });
   const tileset = await create3dtiles(cell, useGzip ? /gltf/i.test(extension) ? GLTF_RE : GLB_RE : extension, useTilesImplicitTiling, output, subtreeLevels, useLod, useGzip);
   (tileset.extras || (tileset.extras = {})).stationIids = extractFileName(input);
-  tileset.extras.matrix = mainMatrix.reduce((pre, cur) => { pre.push(cur); return pre; }, [])
+  tileset.extras.matrix = getRootExtrasMatrix(document).reduce((pre, cur) => { pre.push(cur); return pre; }, [])
   await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
   console.log("Tileset done");
   await create3dtilesContent(output, document, cell, extension, useLod, compressType);

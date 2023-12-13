@@ -19,6 +19,7 @@ import {
   createReadStream,
   createWriteStream
 } from "fs"
+import { write as iowrite } from "./write.mjs";
 
 const pipe = promisify(pipeline)
 
@@ -641,8 +642,12 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           });
       }
       
-      await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}${useLod ? "-high" : ""}.${extension}`), doc);
-    
+      // await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}${useLod ? "-high" : ""}.${extension}`), doc);
+      await iowrite(
+        io,
+        doc,
+        path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}${useLod ? "-high" : ""}.${extension}`)
+      );
       if (useLod) {
         // lowDoc = doc.clone();
         lowDoc = doc;
@@ -664,7 +669,12 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           //   .setRequired(true)
           //   .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
           
-          await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`), lowDoc);
+          // await io.write(path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`), lowDoc);
+          await iowrite(
+            io,
+            lowDoc,
+            path.join(basePath, `${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension}`)
+          );
         } catch (err) {
           console.error(`${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}-low.${extension} compress failed`);
         }
