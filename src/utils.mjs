@@ -691,25 +691,31 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
   fse.writeJSONSync(path.join(pt, "metadata.json"), metadataMap)
 }
 
-const isMaterialLike = (aMaterial, bMaterial) => {
-  return aMaterial.getName() === bMaterial.getName()
-  // const aTexture = aMaterial.getBaseColorTexture();
-  // const bTexture = bMaterial.getBaseColorTexture();
-  // if(!!aTexture || !!bTexture){
-  //   if(!!aTexture && !!bTexture&& aTexture.getImage().toString() === bTexture.getImage().toString()){
-  //     return true
-  //   }else{
-  //     return false
-  //   }
-  // }
+const isTextureLike = (aTexutre, bTexture) => {
+  return (aTexutre === null && bTexture === null)
+  || (aTexutre && bTexture && md5(aTexutre.getImage()) === md5(bTexture).getImage())
+}
 
-  const a = aMaterial.getBaseColorFactor();
-  const b = bMaterial.getBaseColorFactor();
+const isColorFactorLike = (aColorFactor, bColorFactor) => {
+  return Math.abs(aColorFactor[0] - bColorFactor[0]) < 1 / 256
+    && Math.abs(aColorFactor[1] - bColorFactor[1]) < 1 / 256
+    && Math.abs(aColorFactor[2] - bColorFactor[2]) < 1 / 256
+    && aColorFactor[3] === bColorFactor[3]
+}
+
+const isMaterialLike = (aMaterial, bMaterial) => {
+  // TODO 这里简单进行名称 判断针对美工模型， 颜色判断针对原始模型
+  const aBaseColorTexture = aMaterial.getBaseColorTexture();
+  const aNormalTexture = aMaterial.getNormalTexture();
+  const aBaseColorFactor = aMaterial.getBaseColorFactor();
+  const bBaseColorTexture = bMaterial.getBaseColorTexture();
+  const bNormalTexture = bMaterial.getNormalTexture();
+  const bBaseColorFactor = bMaterial.getBaseColorFactor();
   
-  return Math.abs(a[0] - b[0]) < 0.01
-    && Math.abs(a[1] - b[1]) < 0.01
-    && Math.abs(a[2] - b[2]) < 0.01
-    && a[3] === b[3]
+  return aMaterial.getDoubleSided() === bMaterial.getDoubleSided()
+    && isTextureLike(aBaseColorTexture, bBaseColorTexture)
+    && isTextureLike(aNormalTexture, bNormalTexture)
+    && isColorFactorLike(aBaseColorFactor, bBaseColorFactor)
 }
 
 const isBboxContain = (containerBBox, bbox) => {
