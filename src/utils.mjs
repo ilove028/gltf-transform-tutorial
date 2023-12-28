@@ -692,8 +692,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
 }
 
 const isTextureLike = (aTexutre, bTexture) => {
-  return (aTexutre === null && bTexture === null)
-  || (aTexutre && bTexture && md5(aTexutre.getImage()) === md5(bTexture).getImage())
+  return !!((aTexutre === null && bTexture === null)
+  || (aTexutre && bTexture && md5(aTexutre.getImage()) === md5(bTexture.getImage())))
 }
 
 const isColorFactorLike = (aColorFactor, bColorFactor) => {
@@ -704,7 +704,6 @@ const isColorFactorLike = (aColorFactor, bColorFactor) => {
 }
 
 const isMaterialLike = (aMaterial, bMaterial) => {
-  // TODO 这里简单进行名称 判断针对美工模型， 颜色判断针对原始模型
   const aBaseColorTexture = aMaterial.getBaseColorTexture();
   const aNormalTexture = aMaterial.getNormalTexture();
   const aBaseColorFactor = aMaterial.getBaseColorFactor();
@@ -712,10 +711,19 @@ const isMaterialLike = (aMaterial, bMaterial) => {
   const bNormalTexture = bMaterial.getNormalTexture();
   const bBaseColorFactor = bMaterial.getBaseColorFactor();
   
-  return aMaterial.getDoubleSided() === bMaterial.getDoubleSided()
-    && isTextureLike(aBaseColorTexture, bBaseColorTexture)
-    && isTextureLike(aNormalTexture, bNormalTexture)
-    && isColorFactorLike(aBaseColorFactor, bBaseColorFactor)
+  // return aMaterial.getDoubleSided() === bMaterial.getDoubleSided()
+  //   && isTextureLike(aBaseColorTexture, bBaseColorTexture)
+  //   && isTextureLike(aNormalTexture, bNormalTexture)
+  //   && isColorFactorLike(aBaseColorFactor, bBaseColorFactor)
+  // TODO 不使用上面判断方案是性能问题
+  return aMaterial.getName() === bMaterial.getName()
+    || (
+        aBaseColorTexture === null
+        && bBaseColorTexture === null
+        && aNormalTexture === null
+        && bNormalTexture === null
+        && isColorFactorLike(aBaseColorFactor, bBaseColorFactor)
+        )
 }
 
 const isBboxContain = (containerBBox, bbox) => {
