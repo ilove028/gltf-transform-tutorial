@@ -59,11 +59,32 @@ const writeGLB = async (io, doc, uri) => {
  */
 const write = async (io, doc, uri) => {
   const isGLB = /\.glb$/.test(uri);
-  
+  decorationIoWriteJSON(io);
+  // 这里修改io的writeJSON 
   if (isGLB) {
     await writeGLB(io, doc, uri);
   } else {
     await io.write(uri, doc);
+  }
+}
+
+/**
+ * 
+ * @param {import("@gltf-transform/core").PlatformIO} io 
+ * @returns 
+ */
+const decorationIoWriteJSON = async (io) => {
+  if (!io.__originWriteJSON) {
+    io.__originWriteJSON = io.writeJSON;
+    io.writeJSON = async function(doc, _options) {
+      const res = await io.__originWriteJSON(doc, _options);
+
+      if (res.json && res.json.asset) {
+        res.json.asset.generator = undefined;
+      }
+
+      return res;
+    }
   }
 }
 

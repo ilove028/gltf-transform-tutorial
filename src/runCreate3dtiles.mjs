@@ -19,7 +19,7 @@ const getRootExtrasMatrix = (document) => {
     : create()
 }
 
-const run = async (input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000, useGzip, meshBox) => {
+const run = async ({ input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000, useGzip, meshBox, needRename }) => {
   if (useLod) {
     // 隐式暂时不支持Lod.
     useTilesImplicitTiling = false
@@ -115,8 +115,10 @@ const run = async (input, output, extension = "glb", useTilesImplicitTiling = fa
   try {
     await writeMeshBox(path.join(output, 'metadata'), meshBox)
   } catch (e) {}
-  if (useGzip) {
+  if (needRename) {
     await rename(output);
+  }
+  if (useGzip) {
     await compress(output)
   }
   console.log(
@@ -271,9 +273,10 @@ ${content}`
     useLod = false,
     compressType = 'EXT_meshopt_compression',
     useGzip = true,
-    meshBox = null
+    meshBox = null,
+    needRename = true
   } = config;
-  run(input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox).catch((e) => {
+  run({ input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox, needRename }).catch((e) => {
     fse.appendFileSync(logPath, e.stack);
   })
 } else {
