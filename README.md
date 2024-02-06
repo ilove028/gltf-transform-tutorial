@@ -12,3 +12,9 @@ pkg .\src\testSharp.js -t node16-win --out-path .\bin
 2. 设置nasm环境变量 path
 3. powershell 运行 nexe -i "dist\runCreate3dtiles.js" -o "bin\runCreate3dtiles.exe" --build 首次构建
 4. 打包出来模块引用还是不对
+
+MS
+1. 修改config extension glb maxVertexCount 50000000 useGzip true 使用 01150100105000000000000000000000 为基准
+2. 使用sharp处理图片
+3. 使用原始 io.write
+4. needRename false
