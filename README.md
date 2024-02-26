@@ -18,3 +18,5 @@ MS
 2. 使用sharp处理图片
 3. 使用原始 io.write
 4. needRename false
+5. setRoughnessFactor(0.02)
+6. setMetallicFactor(0.4)

@@ -442,15 +442,15 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 newMaterial
                   .setBaseColorFactor(material.getBaseColorFactor())
                   .setBaseColorTexture(material)
-                  .setRoughnessFactor(0.02)
-                  .setMetallicFactor(0.4)
+                  .setRoughnessFactor(material.getRoughnessFactor())
+                  .setMetallicFactor(material.getMetallicFactor())
                   .setDoubleSided(true)
                   .setAlphaMode(material.getAlphaMode());
               } else {
                 newMaterial
                   .setBaseColorFactor(material.getBaseColorFactor())
-                  .setRoughnessFactor(0.02)
-                  .setMetallicFactor(0.4)
+                  .setRoughnessFactor(material.getRoughnessFactor())
+                  .setMetallicFactor(material.getMetallicFactor())
                   .setAlphaMode(material.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
                   // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
                   // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
@@ -546,8 +546,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 existMaterial = newDocument.createMaterial(oldMaterial.getName())
                   .setBaseColorFactor(oldMaterial.getBaseColorFactor())
                   .setBaseColorTexture(texture)
-                  .setRoughnessFactor(0.02)
-                  .setMetallicFactor(0.4)
+                  .setRoughnessFactor(oldMaterial.getRoughnessFactor())
+                  .setMetallicFactor(oldMaterial.getMetallicFactor())
                   .setDoubleSided(true)
                   .setAlphaMode(oldMaterial.getAlphaMode());
                 // unity的文件是webp不用转换 解决exe引用sharp文件问题
@@ -573,8 +573,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 existMaterial = newDocument
                   .createMaterial(oldMaterial.getName())
                   .setBaseColorFactor(oldMaterial.getBaseColorFactor())
-                  .setRoughnessFactor(0.02)
-                  .setMetallicFactor(0.4)
+                  .setRoughnessFactor(oldMaterial.getRoughnessFactor())
+                  .setMetallicFactor(oldMaterial.getMetallicFactor())
                   .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
                   // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
                   // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
