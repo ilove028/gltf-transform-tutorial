@@ -10,7 +10,7 @@ import fse from "fs-extra";
 import { KHRTextureTransform } from '@gltf-transform/extensions';
 // import { version } from "../package.json";
 // TODO 这里ES6引用json会报错
-const version = "1.0.0";
+const version = "1.1.0";
 const { mat4: { create, multiply, invert, getTranslation } } = glMatrix;
 const getRootExtrasMatrix = (document) => {
   const extras = document.getRoot().getExtras();
