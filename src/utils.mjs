@@ -557,8 +557,11 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 // });
 
                 const textureInfo = existMaterial.getBaseColorTextureInfo(); // 未生效
-                textureInfo.setMagFilter(TextureInfo.MagFilter.LINEAR)
-                textureInfo.setMinFilter(TextureInfo.MinFilter.LINEAR)
+                const oldTextureInfo = oldMaterial.getBaseColorTextureInfo();
+                const oldMagFilter = oldTextureInfo && oldTextureInfo.getMagFilter();
+                const oldMinFilter = oldTextureInfo && oldTextureInfo.getMinFilter();
+                textureInfo.setMagFilter(oldMagFilter ? oldMagFilter : TextureInfo.MagFilter.LINEAR);
+                textureInfo.setMinFilter(oldMinFilter ? oldMinFilter : TextureInfo.MinFilter.LINEAR_MIPMAP_NEAREST);
 
                 //贴图重复值不为1时
                 const scale = oldMaterial.getBaseColorTextureInfo().getExtension('KHR_texture_transform');
