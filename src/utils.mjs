@@ -560,8 +560,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 const oldTextureInfo = oldMaterial.getBaseColorTextureInfo();
                 const oldMagFilter = oldTextureInfo && oldTextureInfo.getMagFilter();
                 const oldMinFilter = oldTextureInfo && oldTextureInfo.getMinFilter();
-                textureInfo.setMagFilter(oldMagFilter ? oldMagFilter : TextureInfo.MagFilter.LINEAR);
-                textureInfo.setMinFilter(oldMinFilter ? oldMinFilter : TextureInfo.MinFilter.LINEAR_MIPMAP_NEAREST);
+                textureInfo.setMagFilter(oldMagFilter ? oldMagFilter : null);
+                textureInfo.setMinFilter(oldMinFilter ? oldMinFilter : null);
 
                 //贴图重复值不为1时
                 const scale = oldMaterial.getBaseColorTextureInfo().getExtension('KHR_texture_transform');
