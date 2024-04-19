@@ -8,6 +8,7 @@ import path from "path";
 import glMatrix from "gl-matrix";
 import fse from "fs-extra";
 import { KHRTextureTransform } from '@gltf-transform/extensions';
+import createGlft from './runCreateGltf.mjs'
 // import { version } from "../package.json";
 // TODO 这里ES6引用json会报错
 const version = "1.3.0";
@@ -274,11 +275,18 @@ ${content}`
     compressType = 'EXT_meshopt_compression',
     useGzip = true,
     meshBox = null,
-    needRename = true
+    needRename = true,
+    isCreateGlft
   } = config;
-  run({ input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox, needRename }).catch((e) => {
-    fse.appendFileSync(logPath, e.stack);
-  })
+  if (isCreateGlft) {
+    createGlft({ input, output, compressType, extension, useGzip, needRename }).catch((e) => {
+      fse.appendFileSync(logPath, e.stack);
+    })
+  } else {
+    run({ input, output, extension, useTilesImplicitTiling, subtreeLevels, useLod, compressType, maxVertexCount, useGzip, meshBox, needRename }).catch((e) => {
+      fse.appendFileSync(logPath, e.stack);
+    })
+  }
 } else {
   throw new Error("需要指定一个JSON配置文件")
 }
