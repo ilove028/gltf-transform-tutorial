@@ -1,12 +1,12 @@
+import { extendExtras } from './util.mjs'
+
 const KEY = Symbol('AnimationNode')
 
 /**
  * @param {import("@gltf-transform/core").Node} node
  */
 const mark = (node) => {
-  const extra = node.getExtras()
-  extra[KEY] = true
-  node.setExtras()
+  extendExtras(node, KEY, true)
 }
 /**
  * @param {import("@gltf-transform/core").Node | null} node

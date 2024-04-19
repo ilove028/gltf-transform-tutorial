@@ -2,10 +2,10 @@ import { NodeIO } from "@gltf-transform/core";
 import { rm } from "fs/promises";
 import fse from "fs-extra";
 import { KHRDracoMeshCompression, EXTMeshoptCompression } from '@gltf-transform/extensions';
-import { reorder } from '@gltf-transform/functions';
+import { reorder, prune } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import { MeshoptEncoder } from 'meshoptimizer';
-import { markAnimationNode } from "./common/index.mjs";
+import { markAnimationNode, uniformMaterial } from "./common/index.mjs";
 
 /**
  * 
@@ -60,23 +60,28 @@ const meshoptCompression = async (io, document) => {
  * @param {string} dir 
  */
 const clear = async (dir) => {
-  await fse.ensureDir(output);
-  await rm(output, { recursive: true });
-  await fse.ensureDir(output);
+  await fse.ensureDir(dir);
+  await rm(dir, { recursive: true });
+  await fse.ensureDir(dir);
 }
 /**
- * 对Gltf进行合批
+ * 对Gltf进行优化 合批 裁剪
  * @param {import("@gltf-transform/core").Document} document 
  * @param {*} options 
  * @returns {import("@gltf-transform/core").Document}
  */
-const merge = async (document, options) => {
+const optimize = async (document, options) => {
   // const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0]
   const nodes = document.getRoot().listNodes()
 
   nodes.forEach((node) => {
     markAnimationNode(document, node)
+    uniformMaterial(document, node)
   })
+
+  await document.transform(prune());
+
+  return document
 }
 
 /**
@@ -102,7 +107,7 @@ export default async function ({ input, output, compressType = 'EXT_meshopt_comp
     document = document.merge(await io.read(input[i]))
   }
 
-  document = await merge(document)
+  document = await optimize(document)
 
   if (compressType === 'EXT_meshopt_compression') {
     document = await meshoptCompression(io, document)

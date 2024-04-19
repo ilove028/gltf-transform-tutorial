@@ -247,7 +247,31 @@ function getTextureMd5(texture) {
     return texture.getExtras()[symbol]
   }
 }
+/**
+ * 将相同材质修改为统一引用材质
+ * @param {import("@gltf-transform/core").Document} document 
+ * @param {import("@gltf-transform/core").Node} node 
+ */
+const uniformMaterial = (document, node) => {
+  const mesh = node.getMesh()
+
+  if (mesh) {
+    const materials = document.getRoot().listMaterials()
+    mesh.listPrimitives().forEach((primitive) => {
+      const mtl = primitive.getMaterial()
+
+      for (let i = 0; i < materials.length; i++) {
+        if (mtl === materials[i]) {
+          break;
+        } else if (isMaterialEqual(mtl, materials[i])) {
+          primitive.setMaterial(materials[i])
+        }
+      }
+    })
+  }
+}
 
 export {
-  isMaterialEqual
+  isMaterialEqual,
+  uniformMaterial
 }
