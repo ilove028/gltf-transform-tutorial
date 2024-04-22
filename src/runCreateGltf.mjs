@@ -1,11 +1,9 @@
 import { NodeIO } from "@gltf-transform/core";
-import { rm } from "fs/promises";
-import fse from "fs-extra";
 import { KHRDracoMeshCompression, EXTMeshoptCompression } from '@gltf-transform/extensions';
 import { reorder, prune } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import { MeshoptEncoder } from 'meshoptimizer';
-import { markAnimationNode, uniformMaterial } from "./common/index.mjs";
+import { mergePrimitives, clear } from "./common/index.mjs";
 
 /**
  * 
@@ -56,15 +54,6 @@ const meshoptCompression = async (io, document) => {
 }
 
 /**
- * 递归清除指定路径文件 并保证文件夹目录存在
- * @param {string} dir 
- */
-const clear = async (dir) => {
-  await fse.ensureDir(dir);
-  await rm(dir, { recursive: true });
-  await fse.ensureDir(dir);
-}
-/**
  * 对Gltf进行优化 合批 裁剪
  * @param {import("@gltf-transform/core").Document} document 
  * @param {*} options 
@@ -72,14 +61,16 @@ const clear = async (dir) => {
  */
 const optimize = async (document, options) => {
   // const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0]
-  const nodes = document.getRoot().listNodes()
+  // const nodes = document.getRoot().listNodes()
 
-  nodes.forEach((node) => {
-    markAnimationNode(document, node)
-    uniformMaterial(document, node)
-  })
+  // nodes.forEach((node) => {
+  //   markAnimationNode(document, node)
+  //   uniformMaterial(document, node)
+  //   collectInstancedNode(document, node)
+  //   collectCanMergePrimitives(document, node)
+  // })
 
-  await document.transform(prune());
+  await document.transform(prune(), mergePrimitives());
 
   return document
 }
