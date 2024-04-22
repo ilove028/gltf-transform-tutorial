@@ -3,7 +3,7 @@ import { KHRDracoMeshCompression, EXTMeshoptCompression } from '@gltf-transform/
 import { reorder, prune } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import { MeshoptEncoder } from 'meshoptimizer';
-import { mergePrimitives, clear } from "./common/index.mjs";
+import { mergePrimitives, clear, uniformMaterial } from "./common/index.mjs";
 
 /**
  * 
@@ -70,7 +70,7 @@ const optimize = async (document, options) => {
   //   collectCanMergePrimitives(document, node)
   // })
 
-  await document.transform(prune(), mergePrimitives());
+  await document.transform(uniformMaterial(), mergePrimitives(), prune());
 
   return document
 }

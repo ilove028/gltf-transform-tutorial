@@ -249,24 +249,27 @@ function getTextureMd5(texture) {
 }
 /**
  * 将相同材质修改为统一引用材质
- * @param {import("@gltf-transform/core").Document} document 
- * @param {import("@gltf-transform/core").Node} node 
+ * @param {*} options 
+ * @returns 
  */
-const uniformMaterial = (document, node) => {
-  const mesh = node.getMesh()
-
-  if (mesh) {
+const uniformMaterial = (options) => {
+  /**
+   * @param {import("@gltf-transform/core").Document} document 
+   */
+  return (document) => {
     const materials = document.getRoot().listMaterials()
-    mesh.listPrimitives().forEach((primitive) => {
-      const mtl = primitive.getMaterial()
+    document.getRoot().listMeshes().forEach((mesh) => {
+      mesh.listPrimitives().forEach((primitive) => {
+        const mtl = primitive.getMaterial()
 
-      for (let i = 0; i < materials.length; i++) {
-        if (mtl === materials[i]) {
-          break;
-        } else if (isMaterialEqual(mtl, materials[i])) {
-          primitive.setMaterial(materials[i])
+        for (let i = 0; i < materials.length; i++) {
+          if (mtl === materials[i]) {
+            break;
+          } else if (isMaterialEqual(mtl, materials[i])) {
+            primitive.setMaterial(materials[i])
+          }
         }
-      }
+      })
     })
   }
 }
