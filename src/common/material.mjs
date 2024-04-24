@@ -257,17 +257,16 @@ const uniformMaterial = (options) => {
    * @param {import("@gltf-transform/core").Document} document 
    */
   return (document) => {
-    const materials = document.getRoot().listMaterials()
+    const materials = []
     document.getRoot().listMeshes().forEach((mesh) => {
       mesh.listPrimitives().forEach((primitive) => {
         const mtl = primitive.getMaterial()
+        const index = materials.findIndex(m => isMaterialEqual(m, mtl))
 
-        for (let i = 0; i < materials.length; i++) {
-          if (mtl === materials[i]) {
-            break;
-          } else if (isMaterialEqual(mtl, materials[i])) {
-            primitive.setMaterial(materials[i])
-          }
+        if (index === -1) {
+          materials.push(mtl)
+        } else {
+          primitive.setMaterial(materials[index])
         }
       })
     })
