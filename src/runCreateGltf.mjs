@@ -56,10 +56,10 @@ const meshoptCompression = async (io, document) => {
 /**
  * 对Gltf进行优化 合批 裁剪
  * @param {import("@gltf-transform/core").Document} document 
- * @param {*} options 
+ * @param {import("@gltf-transform/core").NodeIO} io 
  * @returns {import("@gltf-transform/core").Document}
  */
-const optimize = async (document, options) => {
+const optimize = async (document, io) => {
   // const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0]
   // const nodes = document.getRoot().listNodes()
 
@@ -70,7 +70,7 @@ const optimize = async (document, options) => {
   //   collectCanMergePrimitives(document, node)
   // })
 
-  await document.transform(uniformMaterial(), mergePrimitives(), prune());
+  await document.transform(uniformMaterial(), mergePrimitives(io), prune());
 
   return document
 }
@@ -98,7 +98,7 @@ export default async function ({ input, output, compressType = 'EXT_meshopt_comp
     document = document.merge(await io.read(input[i]))
   }
 
-  document = await optimize(document)
+  document = await optimize(document, io)
 
   if (compressType === 'EXT_meshopt_compression') {
     document = await meshoptCompression(io, document)

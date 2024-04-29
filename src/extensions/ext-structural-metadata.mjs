@@ -20,7 +20,7 @@ class Metadata extends ExtensionProperty {
   }
 
   addItem(item) {
-    this.items.push(item);
+    return this.items.push(item);
   }
 
   getCount() {
@@ -32,33 +32,41 @@ export class EXTStructuralMetadata extends Extension {
   static EXTENSION_NAME = EXT_STRUCTURAL_METADATA;
   extensionName = EXT_STRUCTURAL_METADATA;
 
+  setInline(inline = false) {
+    this.inline = inline
+  }
+
   createMeatdata() {
     return new Metadata(this.document.getGraph())
+  }
+
+  getSchema() {
+    return {
+      classes: {
+        entity: {
+          name: "Entity info.",
+          properties: {
+            iid: {
+              type: "STRING",
+              required: true
+            },
+            primitiveType: {
+              // rs-cesium PrimitiveType Enum定义 Transparent = 0  BigScene = 1 SmallScene = 2 Unknown = 4 这个是这里定义的 rs 没有
+              // Unity 直接打过来的模型只有 0 和 1 的情况
+              type: "SCALAR",
+              componentType: "UINT8"
+            }
+          }
+        }
+      }
+    }
   }
 
   async writeSchema(filePath) {
     const basePath = path.join(filePath, "contents");
     await fse.ensureDir(basePath);
     await writeFile(path.join(basePath, "schema.json"), JSON.stringify(
-      {
-        classes: {
-          entity: {
-            name: "Entity info.",
-            properties: {
-              iid: {
-                type: "STRING",
-                required: true
-              },
-              primitiveType: {
-                // rs-cesium PrimitiveType Enum定义 Transparent = 0  BigScene = 1 SmallScene = 2 Unknown = 4 这个是这里定义的 rs 没有
-                // Unity 直接打过来的模型只有 0 和 1 的情况
-                type: "SCALAR",
-                componentType: "UINT8"
-              }
-            }
-          }
-        }
-      },
+      this.getSchema(),
       null,
       2
     ));
@@ -79,7 +87,8 @@ export class EXTStructuralMetadata extends Extension {
       const primitiveTypeBufferViewDefIndex = rootDef.bufferViews.length + 2; // 这里简单实现 将 primitiveType 分为另一个buffer
       rootDef.extensions = rootDef.extensions || {};
       rootDef.extensions[EXTStructuralMetadata.EXTENSION_NAME] = {
-        schemaUri: "schema.json",
+        schemaUri: this.inline ? undefined : "schema.json",
+        schema: this.inline ? this.getSchema() : undefined,
         propertyTables: [
           {
             name: "entity_2023_7_19",
