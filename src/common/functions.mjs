@@ -1,7 +1,7 @@
 import { PropertyType } from '@gltf-transform/core'
 import { EXTMeshGPUInstancing } from "@gltf-transform/extensions"
 import { joinPrimitives, transformPrimitive } from '@gltf-transform/functions';
-import { createPrimGroupKey, isInAnimationPath } from './util.mjs'
+import { createPrimGroupKey, isInAnimationPath, hasSkinAttribute } from './util.mjs'
 
 function mergePrimitives(options) {
   /**
@@ -25,7 +25,7 @@ function mergePrimitives(options) {
           // 该mesh被实例化节点引用
         } else if (nodes.length === 0) {
           throw new Error(`Mesh ${index} doesn't have a node parent`)
-        } else if (!isInAnimationPath(nodes[nodes.length - 1], animationNodes)) {
+        } else if (!isInAnimationPath(nodes[nodes.length - 1], animationNodes) && !hasSkinAttribute(primitive)) {
           const key = createPrimGroupKey(primitive)
           const primitives = mergeMap.get(key)
           if (primitives) {

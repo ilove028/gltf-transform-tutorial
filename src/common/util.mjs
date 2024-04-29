@@ -123,6 +123,15 @@ function isInAnimationPath(node, animationNodes) {
 	}
 }
 
+/**
+ * 判断Primitive是否有Skin的相关属性
+ * @param {import("@gltf-transform/core").Primitive} primitive 
+ * @returns {boolean}
+ */
+function hasSkinAttribute(primitive) {
+	return !!primitive.listSemantics().find((semantic) => /^JOINTS|^WEIGHTS/i.test(semantic))
+}
+
 export {
   clear,
   extendExtras,
@@ -130,5 +139,6 @@ export {
   collectInstancedNode,
   canMerge,
   createPrimGroupKey,
-	isInAnimationPath
+	isInAnimationPath,
+	hasSkinAttribute
 }
