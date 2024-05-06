@@ -555,6 +555,52 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                 //   encoder: sharp,
                 //   targetFormat: 'webp'
                 // });
+                const oldNormalTexture = oldMaterial.getNormalTexture();
+
+                if (oldNormalTexture) {
+                  const normalImage = oldNormalTexture.getImage();
+                  if (normalImage) {
+                    const normalMd5 = md5(normalImage);
+                    const normalUrl = normalMd5 + '.webp';
+                    const normalTexture = newDocument.createTexture(oldNormalTexture.getName())
+                      .setImage(normalImage)
+                      .setURI(normalUrl)
+                    existMaterial.setNormalTexture(normalTexture)
+                    const oldNormalTextureInfo = oldMaterial.getNormalTextureInfo()
+                    const normalTextureInfo = existMaterial.getNormalTextureInfo()
+                    if (oldNormalTextureInfo && normalTextureInfo) {
+                      normalTextureInfo.setMinFilter(oldNormalTextureInfo.getMinFilter())
+                      normalTextureInfo.setMagFilter(oldNormalTextureInfo.getMagFilter())
+                      normalTextureInfo.setWrapS(oldNormalTextureInfo.getWrapS())
+                      normalTextureInfo.setWrapT(oldNormalTextureInfo.getWrapT())
+                      normalTextureInfo.setTexCoord(oldNormalTextureInfo.getTexCoord())
+                    }
+                  }
+                }
+
+                const oldMetallicRoughnessTexture = oldMaterial.getMetallicRoughnessTexture();
+
+                if (oldMetallicRoughnessTexture) {
+                  const metallicRoughnessImage = oldMetallicRoughnessTexture.getImage();
+                  if (metallicRoughnessImage) {
+                    const metallicRoughnessMd5 = md5(metallicRoughnessImage);
+                    const metallicRoughnessUrl = metallicRoughnessMd5 + '.webp';
+                    const metallicRoughnessTexture = newDocument.createTexture(oldMetallicRoughnessTexture.getName())
+                      .setImage(metallicRoughnessImage)
+                      .setURI(metallicRoughnessUrl)
+                    
+                    existMaterial.setMetallicRoughnessTexture(metallicRoughnessTexture)
+                    const oldMetallicRoughnessInfo = oldMaterial.getMetallicRoughnessTextureInfo()
+                    const metallicRoughnessInfo = existMaterial.getMetallicRoughnessTextureInfo()
+                    if (oldMetallicRoughnessInfo && metallicRoughnessInfo) {
+                      metallicRoughnessInfo.setMinFilter(oldMetallicRoughnessInfo.getMinFilter())
+                      metallicRoughnessInfo.setMagFilter(oldMetallicRoughnessInfo.getMagFilter())
+                      metallicRoughnessInfo.setWrapS(oldMetallicRoughnessInfo.getWrapS())
+                      metallicRoughnessInfo.setWrapT(oldMetallicRoughnessInfo.getWrapT())
+                      metallicRoughnessInfo.setTexCoord(oldMetallicRoughnessInfo.getTexCoord())
+                    }
+                  }
+                }
 
                 const textureInfo = existMaterial.getBaseColorTextureInfo(); // 未生效
                 const oldTextureInfo = oldMaterial.getBaseColorTextureInfo();
