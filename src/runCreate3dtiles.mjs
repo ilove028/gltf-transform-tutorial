@@ -276,10 +276,11 @@ ${content}`
     useGzip = true,
     meshBox = null,
     needRename = true,
-    isCreateGlft
+    isCreateGlft,
+    toTileset = false
   } = config;
   if (isCreateGlft) {
-    createGlft({ input, output, compressType, extension, useGzip, needRename }).catch((e) => {
+    createGlft({ input, output, compressType, extension, useGzip, needRename, toTileset }).catch((e) => {
       fse.appendFileSync(logPath, e.stack);
     })
   } else {

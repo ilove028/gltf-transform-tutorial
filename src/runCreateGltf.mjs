@@ -3,9 +3,10 @@ import { KHRDracoMeshCompression, EXTMeshoptCompression } from '@gltf-transform/
 import { reorder, prune } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import { MeshoptEncoder } from 'meshoptimizer';
-import { mergePrimitives, clear, uniformMaterial } from "./common/index.mjs";
+import { mergePrimitives, clear, uniformMaterial, createTileSet } from "./common/index.mjs";
 import fse from "fs-extra";
 import path from "path";
+import { writeFile } from "fs/promises";
 
 /**
  * 
@@ -97,7 +98,15 @@ const optimize = async (document, io, options = {}) => {
  *  needRename?: boolean;
  * }} config 
  */
-export default async function ({ input, output, compressType = 'EXT_meshopt_compression', extension = 'glb', useGzip = true, needRename = true } = {}) {
+export default async function ({
+  input,
+  output,
+  compressType = 'EXT_meshopt_compression',
+  extension = 'glb',
+  useGzip = true,
+  needRename = true,
+  toTileset = true
+} = {}) {
   await clear(output)
 
   const io = new NodeIO()
@@ -109,13 +118,21 @@ export default async function ({ input, output, compressType = 'EXT_meshopt_comp
     document = document.merge(await io.read(input[i]))
   }
 
-  document = await optimize(document, io, { output })
+  const metadaPath = toTileset ? path.join(output, 'metadata') : output
+  fse.ensureDir(metadaPath)
+  document = await optimize(document, io, { output: metadaPath })
 
   if (compressType === 'EXT_meshopt_compression') {
     document = await meshoptCompression(io, document)
   } else if (compressType === 'KHR_draco_mesh_compression') {
     document = await dracoMeshCompression(io, document)
   }
-
-  await io.write(`${output}/model.${extension}`, document);
+  if (toTileset) {
+    const tileset = createTileSet(document)
+    await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
+  }
+  if (toTileset) {
+    fse.ensureDir(path.join(output, "contents"))
+  } 
+  await io.write(`${output}${toTileset ? `/contents/0-0-0.${extension}` : `/model.${extension}`}`, document);
 }

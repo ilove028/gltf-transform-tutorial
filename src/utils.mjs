@@ -1286,5 +1286,6 @@ export {
   rename,
   getExtras,
   useGpuInstancing,
-  getBboxBox
+  getBboxBox,
+  getBboxsMaxGeometricError2
 }

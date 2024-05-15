@@ -2,6 +2,9 @@ import { rm } from "fs/promises";
 import fse from "fs-extra";
 import { Document } from "@gltf-transform/core"
 import { joinPrimitives } from "@gltf-transform/functions";
+import { getBboxsMaxGeometricError2, getBboxBox } from "../utils.mjs"
+import { getBounds } from "../getBounds.mjs";
+
 /**
  * 扩展extras
  * @param {import("@gltf-transform/core").Property} property 
@@ -132,6 +135,38 @@ function hasSkinAttribute(primitive) {
 	return !!primitive.listSemantics().find((semantic) => /^JOINTS|^WEIGHTS/i.test(semantic))
 }
 
+/**
+ * 生成tileset
+ * @param {import("@gltf-transform/core").Document} document 
+ */
+function createTileSet(document) {
+	const bounds = getBounds(document.getRoot().getDefaultScene());
+	const tileset = {
+    asset: {
+      version: "1.1",
+      // TODO 这里最好根据生成文件hash做version
+      tilesetVersion: Math.random().toString(16).slice(2)
+    },
+    geometricError: getBboxsMaxGeometricError2(bounds),
+    root: {
+			refine: "ADD",
+			geometricError: getBboxsMaxGeometricError2(bounds),
+      boundingVolume: {
+        // sphere: getTileSphere(cell)
+        box: getBboxBox(bounds)
+      },
+			content: {
+				uri: `contents/0-0-0.glb`,
+				boundingVolume: {
+					box: getBboxBox(bounds)
+				}
+			}
+		}
+  }
+
+	return tileset
+}
+
 export {
   clear,
   extendExtras,
@@ -140,5 +175,6 @@ export {
   canMerge,
   createPrimGroupKey,
 	isInAnimationPath,
-	hasSkinAttribute
+	hasSkinAttribute,
+	createTileSet
 }
