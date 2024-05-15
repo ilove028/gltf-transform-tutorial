@@ -4,6 +4,8 @@ import { reorder, prune } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import { MeshoptEncoder } from 'meshoptimizer';
 import { mergePrimitives, clear, uniformMaterial } from "./common/index.mjs";
+import fse from "fs-extra";
+import path from "path";
 
 /**
  * 
@@ -57,9 +59,10 @@ const meshoptCompression = async (io, document) => {
  * 对Gltf进行优化 合批 裁剪
  * @param {import("@gltf-transform/core").Document} document 
  * @param {import("@gltf-transform/core").NodeIO} io 
+ * @param {{ output: string }} options
  * @returns {import("@gltf-transform/core").Document}
  */
-const optimize = async (document, io) => {
+const optimize = async (document, io, options = {}) => {
   // const scene = document.getRoot().getDefaultScene() || document.getRoot().listScenes()[0]
   // const nodes = document.getRoot().listNodes()
 
@@ -70,7 +73,15 @@ const optimize = async (document, io) => {
   //   collectCanMergePrimitives(document, node)
   // })
 
-  await document.transform(uniformMaterial(), mergePrimitives(io), prune());
+  await document.transform(
+    uniformMaterial(),
+    mergePrimitives(io, (metadata) => {
+      if (options.output) {
+        fse.writeJSONSync(path.join(options.output, "metadata.json"), metadata)
+      }
+    }),
+    prune()
+  );
 
   return document
 }
@@ -98,7 +109,7 @@ export default async function ({ input, output, compressType = 'EXT_meshopt_comp
     document = document.merge(await io.read(input[i]))
   }
 
-  document = await optimize(document, io)
+  document = await optimize(document, io, { output })
 
   if (compressType === 'EXT_meshopt_compression') {
     document = await meshoptCompression(io, document)

@@ -1285,5 +1285,6 @@ export {
   writeMeshBox,
   rename,
   getExtras,
-  useGpuInstancing
+  useGpuInstancing,
+  getBboxBox
 }

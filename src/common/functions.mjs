@@ -4,12 +4,14 @@ import { joinPrimitives, transformPrimitive } from '@gltf-transform/functions';
 import { createPrimGroupKey, isInAnimationPath, hasSkinAttribute } from './util.mjs'
 import { EXTMeshFeatures, EXTStructuralMetadata } from "../extensions/index.mjs";
 import { VertexAttributeSemantic } from "../constant.mjs";
+import { getBounds } from "../getBounds.mjs";
+import { getBboxBox } from "../utils.mjs"
 /**
  * 
  * @param {import("@gltf-transform/core").NodeIO} io 
  * @returns 
  */
-function mergePrimitives(io) {
+function mergePrimitives(io, cb) {
   /**
    * @param {import("@gltf-transform/core").Document} document 
    */
@@ -28,7 +30,9 @@ function mergePrimitives(io) {
      * @type {Map<string, Array<import("@gltf-transform/core").Primitive>>}
      */
     const mergeMap = new Map()
-
+    const metadataMap = {
+      size: 0
+    };
     document.getRoot().listMeshes().forEach((mesh, index) => {
       mesh.listPrimitives().forEach((primitive) => {
         /**
@@ -41,7 +45,17 @@ function mergePrimitives(io) {
         } else if (nodes.length === 0) {
           throw new Error(`Mesh ${index} doesn't have a node parent`)
         } else {
-          const featureLen = metadata.addItem({ iid: nodes[nodes.length - 1].getName(), primitiveType: 4 });
+          const node = nodes[nodes.length - 1];
+          const iid = node.getName();
+          let exist = metadataMap[iid];
+          // 这里使用数组保存主要因为后面submesh可能会出现多个模型对应一个iid 后面3dtilesfeature的映射也是iid对应feature数组
+          if (exist) {
+            exist.push({ box: getBboxBox(getBounds(node)) })
+          } else {
+            metadataMap[iid] = [{ box: getBboxBox(getBounds(node)) }]
+            metadataMap.size += 1;
+          }
+          const featureLen = metadata.addItem({ iid, primitiveType: 4 });
           const count = primitive.getAttribute(VertexAttributeSemantic.POSITION).getCount();
           primitive.setAttribute(
             `${VertexAttributeSemantic.FEATURE_ID}_0`,
@@ -108,6 +122,8 @@ function mergePrimitives(io) {
         )
       )
     })
+
+    cb && cb(metadataMap)
   }
 }
 
