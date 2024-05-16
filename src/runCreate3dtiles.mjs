@@ -20,7 +20,7 @@ const getRootExtrasMatrix = (document) => {
     : create()
 }
 
-const run = async ({ input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType, maxVertexCount = 500000, useGzip, meshBox, needRename }) => {
+const run = async ({ input, output, extension = "glb", useTilesImplicitTiling = false, subtreeLevels = 3, useLod, compressType = "EXT_meshopt_compression", maxVertexCount = 500000, useGzip, meshBox, needRename }) => {
   if (useLod) {
     // 隐式暂时不支持Lod.
     useTilesImplicitTiling = false
@@ -272,12 +272,12 @@ ${content}`
     maxVertexCount = 500000,
     subtreeLevels = 3,
     useLod = false,
-    compressType = 'EXT_meshopt_compression',
+    compressType,
     useGzip = true,
     meshBox = null,
     needRename = true,
     isCreateGlft,
-    toTileset = false
+    toTileset
   } = config;
   if (isCreateGlft) {
     createGlft({ input, output, compressType, extension, useGzip, needRename, toTileset }).catch((e) => {

@@ -7,6 +7,8 @@ import { mergePrimitives, clear, uniformMaterial, createTileSet } from "./common
 import fse from "fs-extra";
 import path from "path";
 import { writeFile } from "fs/promises";
+import { compress, rename } from "./utils.mjs"
+import { GLB_RE, GLTF_RE } from "./constant.mjs";
 
 /**
  * 
@@ -101,7 +103,7 @@ const optimize = async (document, io, options = {}) => {
 export default async function ({
   input,
   output,
-  compressType = 'EXT_meshopt_compression',
+  compressType = 'KHR_draco_mesh_compression',
   extension = 'glb',
   useGzip = true,
   needRename = true,
@@ -128,11 +130,17 @@ export default async function ({
     document = await dracoMeshCompression(io, document)
   }
   if (toTileset) {
-    const tileset = createTileSet(document)
+    const tileset = createTileSet(document, needRename ? /gltf/i.test(extension) ? GLTF_RE : GLB_RE : extension)
     await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
   }
   if (toTileset) {
     fse.ensureDir(path.join(output, "contents"))
   } 
   await io.write(`${output}${toTileset ? `/contents/0-0-0.${extension}` : `/model.${extension}`}`, document);
+  if (needRename) {
+    await rename(output);
+  }
+  if (useGzip) {
+    await compress(output)
+  }
 }

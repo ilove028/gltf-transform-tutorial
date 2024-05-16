@@ -139,7 +139,7 @@ function hasSkinAttribute(primitive) {
  * 生成tileset
  * @param {import("@gltf-transform/core").Document} document 
  */
-function createTileSet(document) {
+function createTileSet(document, extension = "glb") {
 	const bounds = getBounds(document.getRoot().getDefaultScene());
 	const tileset = {
     asset: {
@@ -156,7 +156,7 @@ function createTileSet(document) {
         box: getBboxBox(bounds)
       },
 			content: {
-				uri: `contents/0-0-0.glb`,
+				uri: `contents/0-0-0.${extension}`,
 				boundingVolume: {
 					box: getBboxBox(bounds)
 				}
