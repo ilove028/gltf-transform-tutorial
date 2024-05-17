@@ -48,12 +48,12 @@ const meshoptCompression = async (io, document) => {
     });
 
   await document.transform(
-    // simplify({ simplifier: MeshoptSimplifier, ratio: 0.75, error: 0.001 }),
     reorder({encoder: MeshoptEncoder}),
   );
   document.createExtension(EXTMeshoptCompression)
     .setRequired(true)
-    .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.FILTER });
+    // TOTO 使用filter会让动画节点显示不对
+    .setEncoderOptions({ method: EXTMeshoptCompression.EncoderMethod.QUANTIZE });
 
   return document
 }
@@ -103,7 +103,7 @@ const optimize = async (document, io, options = {}) => {
 export default async function ({
   input,
   output,
-  compressType = 'KHR_draco_mesh_compression',
+  compressType = 'EXT_meshopt_compression',
   extension = 'glb',
   useGzip = true,
   needRename = true,
