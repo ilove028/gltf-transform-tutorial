@@ -2,6 +2,7 @@ import { Accessor, Document, NodeIO } from "@gltf-transform/core";
 import fse from "fs-extra";
 import path from "path";
 import { fileURLToPath } from "url"
+import { dracoMeshCompression } from "./runCreateGltf.mjs"
 
 /**
  * 
@@ -63,6 +64,23 @@ function componentDatatype2TypeCtr(componentDatatype) {
   }
 }
 /**
+ * 
+ * @param {Array<number>} values
+ * @returns {{ min: number; max: number }}
+ */
+function findMinAndMax(values = [], min = Infinity, max = Infinity) {
+  values.forEach((value) => {
+    if (min > value) {
+      min = value
+    }
+    if (max < value) {
+      max = value
+    }
+  })
+
+  return { min, max }
+}
+/**
  * 处理Grd处理后的JSON文件生成gltf attributes里面key为标准GLTF attributename
  * @param {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>} datas 
  */
@@ -72,6 +90,8 @@ async function parseGrd(datas) {
   const buffer = document.createBuffer();
   const material = document.createMaterial()
     .setBaseColorFactor([1, 1, 1, 1]);
+  let min = Infinity;
+  let max = -Infinity;
 
   document.getRoot().setDefaultScene(scene);
 
@@ -87,7 +107,13 @@ async function parseGrd(datas) {
     )
     Object.entries(data.attributes).forEach(([key, item]) => {
       const TypeCtr = componentDatatype2TypeCtr(item.componentDatatype)
+      
+      if (/HEIGHT/i.test(key)) {
+        const res = findMinAndMax(item.values, min, max);
 
+        min = res.min;
+        max = res.max;
+      }
       primitive.setAttribute(
         key,
         document.createAccessor()
@@ -106,7 +132,13 @@ async function parseGrd(datas) {
     )
   });
 
+
+
   const io = new NodeIO();
+
+  document.getRoot().setExtras({ minHeight: min, maxHeight: max })
+
+  await dracoMeshCompression(io, document);
 
   await io.write('./public/terrain.glb', document);
 }

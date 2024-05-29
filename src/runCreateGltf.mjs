@@ -14,7 +14,7 @@ import { GLB_RE, GLTF_RE } from "./constant.mjs";
  * 
  * @param {import("@gltf-transform/core").NodeIO} io 
  * @param {import("@gltf-transform/core").Document} document
- * @returns {import("@gltf-transform/core").Document}
+ * @returns {Promise<import("@gltf-transform/core").Document>}
  */
 const dracoMeshCompression = async (io, document) => {
   io.registerExtensions([KHRDracoMeshCompression])
@@ -143,4 +143,8 @@ export default async function ({
   if (useGzip) {
     await compress(output)
   }
+}
+
+export {
+  dracoMeshCompression
 }
