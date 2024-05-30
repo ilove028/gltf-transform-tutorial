@@ -1,8 +1,11 @@
 import { Accessor, Document, NodeIO } from "@gltf-transform/core";
 import fse from "fs-extra";
 import path from "path";
-import { fileURLToPath } from "url"
 import { dracoMeshCompression } from "./runCreateGltf.mjs"
+import { createTileSet } from "./common/index.mjs";
+import { GLB_RE, GLTF_RE } from "./constant.mjs";
+import { writeFile } from "fs/promises";
+import { compress, rename } from "./utils.mjs"
 
 /**
  * 
@@ -84,7 +87,25 @@ function findMinAndMax(values = [], min = Infinity, max = Infinity) {
  * 处理Grd处理后的JSON文件生成gltf attributes里面key为标准GLTF attributename
  * @param {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>} datas 
  */
-async function parseGrd(datas) {
+async function parseGrd(pt) {
+  const content = fse.readFileSync(pt, { encoding: "utf-8" });
+  const config = JSON.parse(content);
+
+  const {
+    input,
+    output,
+    compressType = 'EXT_meshopt_compression',
+    extension = 'glb',
+    useGzip = true,
+    needRename = true,
+    toTileset = true
+  } = config;
+  /**
+   * @type {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>}
+   */
+  const datas = JSON.parse(fse.readFileSync(input[0], { encoding: "utf-8" }))
+
+
   const document = new Document();
   const scene = document.createScene();
   const buffer = document.createBuffer();
@@ -136,17 +157,26 @@ async function parseGrd(datas) {
 
   const io = new NodeIO();
 
-  document.getRoot().setExtras({ minHeight: min, maxHeight: max })
-
   await dracoMeshCompression(io, document);
+  document.getRoot().setExtras({ minHeight: min, maxHeight: max })
+  // await io.write('./public/terrain.glb', document);
+  if (toTileset) {
+    fse.ensureDir(output)
+    const tileset = createTileSet(document, needRename ? /gltf/i.test(extension) ? GLTF_RE : GLB_RE : extension)
 
-  await io.write('./public/terrain.glb', document);
+    tileset.extras = { minHeight: min, maxHeight: max }
+    await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
+  }
+  if (toTileset) {
+    fse.ensureDir(path.join(output, "contents"))
+  } 
+  await io.write(`${output}${toTileset ? `/contents/0-0-0.${extension}` : `/model.${extension}`}`, document);
+  if (needRename) {
+    await rename(output);
+  }
+  if (useGzip) {
+    await compress(output)
+  }
 }
 
-if (process.argv[2]) {
-  const __filenameNew = fileURLToPath(import.meta.url);
-  const __dirnameNew = path.dirname(__filenameNew)
-  const content = fse.readFileSync(path.join(__dirnameNew, '../', process.argv[2]), { encoding: "utf-8" });
-
-  parseGrd(JSON.parse(content));
-}
+parseGrd(process.argv[2] || "./bin/config.json");
