@@ -1,11 +1,16 @@
 import { Accessor, Document, NodeIO } from "@gltf-transform/core";
+import { center, transformMesh } from "@gltf-transform/functions";
 import fse from "fs-extra";
 import path from "path";
-import { dracoMeshCompression } from "./runCreateGltf.mjs"
+import { dracoMeshCompression, optimize } from "./runCreateGltf.mjs"
 import { createTileSet } from "./common/index.mjs";
 import { GLB_RE, GLTF_RE } from "./constant.mjs";
 import { writeFile } from "fs/promises";
 import { compress, rename } from "./utils.mjs"
+import { getBounds } from "./getBounds.mjs";
+import glMatrix from "gl-matrix";
+
+const { mat4: { fromTranslation } } = glMatrix;
 
 /**
  * 
@@ -116,7 +121,7 @@ async function parseGrd(pt) {
 
   document.getRoot().setDefaultScene(scene);
 
-  datas.forEach((data) => {
+  datas.forEach((data, index) => {
     const primitive = document.createPrimitive()
       .setMaterial(material);
 
@@ -145,7 +150,7 @@ async function parseGrd(pt) {
     })
 
     scene.addChild(
-      document.createNode()
+      document.createNode(`${index}`)
         .setMesh(
           document.createMesh()
             .addPrimitive(primitive)
@@ -157,6 +162,30 @@ async function parseGrd(pt) {
 
   const io = new NodeIO();
 
+  fse.ensureDir(output)
+  const metadaPath = toTileset ? path.join(output, 'metadata') : output
+  fse.ensureDir(metadaPath)
+  const bound = getBounds(scene);
+  const center = [
+    (bound.min[0] + bound.max[0]) / 2,
+    (bound.min[1] + bound.max[1]) / 2,
+    (bound.min[2] + bound.max[2]) / 2
+  ];
+
+  scene.listChildren().forEach((node) => {
+    const mesh = node.getMesh();
+    if (mesh) {
+      // node.setMatrix(fromTranslation([], center))
+      transformMesh(mesh, fromTranslation([], center.map(n => -n)));
+    }
+  });
+
+  await optimize(document, io, { output: metadaPath })
+
+  // await document.transform(
+  //   center()
+  // )
+
   await dracoMeshCompression(io, document);
   document.getRoot().setExtras({ minHeight: min, maxHeight: max })
   // await io.write('./public/terrain.glb', document);
@@ -164,7 +193,7 @@ async function parseGrd(pt) {
     fse.ensureDir(output)
     const tileset = createTileSet(document, needRename ? /gltf/i.test(extension) ? GLTF_RE : GLB_RE : extension)
 
-    tileset.extras = { minHeight: min, maxHeight: max }
+    tileset.extras = { minHeight: min, maxHeight: max, matrix: fromTranslation([], center) }
     await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
   }
   if (toTileset) {

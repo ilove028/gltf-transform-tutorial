@@ -146,5 +146,6 @@ export default async function ({
 }
 
 export {
-  dracoMeshCompression
+  dracoMeshCompression,
+  optimize
 }
