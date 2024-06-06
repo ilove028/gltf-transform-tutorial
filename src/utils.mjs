@@ -2,7 +2,7 @@ import path from "path";
 import { writeFile } from "fs/promises";
 import fse from "fs-extra";
 import { NodeIO, Document, Accessor, Material, TextureInfo } from "@gltf-transform/core";
-import { createTransform, prune, reorder, transformPrimitive, joinPrimitives, simplify } from "@gltf-transform/functions";
+import { createTransform, prune, reorder, transformPrimitive, joinPrimitives, simplify, compressTexture } from "@gltf-transform/functions";
 import { EXTMeshGPUInstancing, EXTMeshoptCompression, KHRDracoMeshCompression, KHRTextureTransform } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
 import draco3d from 'draco3dgltf';
@@ -566,6 +566,11 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                       .setImage(normalImage)
                       .setURI(normalUrl)
                     existMaterial.setNormalTexture(normalTexture)
+                    // unity的文件是webp不用转换 解决exe引用sharp文件问题
+                    // await compressTexture(normalTexture, {
+                    //   encoder: sharp,
+                    //   targetFormat: 'webp'
+                    // });
                     const oldNormalTextureInfo = oldMaterial.getNormalTextureInfo()
                     const normalTextureInfo = existMaterial.getNormalTextureInfo()
                     if (oldNormalTextureInfo && normalTextureInfo) {
@@ -589,7 +594,11 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                       .setImage(metallicRoughnessImage)
                       .setURI(metallicRoughnessUrl)
                     
-                    existMaterial.setMetallicRoughnessTexture(metallicRoughnessTexture)
+                    existMaterial.setMetallicRoughnessTexture(metallicRoughnessTexture);
+                    // await compressTexture(metallicRoughnessTexture, {
+                    //   encoder: sharp,
+                    //   targetFormat: 'webp'
+                    // });
                     const oldMetallicRoughnessInfo = oldMaterial.getMetallicRoughnessTextureInfo()
                     const metallicRoughnessInfo = existMaterial.getMetallicRoughnessTextureInfo()
                     if (oldMetallicRoughnessInfo && metallicRoughnessInfo) {
