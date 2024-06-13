@@ -549,7 +549,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                   .setRoughnessFactor(oldMaterial.getRoughnessFactor())
                   .setMetallicFactor(oldMaterial.getMetallicFactor())
                   .setDoubleSided(true)
-                  .setAlphaMode(oldMaterial.getAlphaMode());
+                  .setAlphaMode(oldMaterial.getAlphaMode())
+                  .setAlphaCutoff(oldMaterial.getAlphaCutoff());
                 // unity的文件是webp不用转换 解决exe引用sharp文件问题
                 // await compressTexture(texture, {
                 //   encoder: sharp,
@@ -633,7 +634,8 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                   .setBaseColorFactor(oldMaterial.getBaseColorFactor())
                   .setRoughnessFactor(oldMaterial.getRoughnessFactor())
                   .setMetallicFactor(oldMaterial.getMetallicFactor())
-                  .setAlphaMode(oldMaterial.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
+                  .setAlphaMode(oldMaterial.getAlphaMode())
+                  .setAlphaCutoff(oldMaterial.getAlphaCutoff())
                   // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
                   // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
                   .setDoubleSided(true);
