@@ -20,6 +20,7 @@ import {
   createWriteStream
 } from "fs"
 import { write as iowrite } from "./write.mjs";
+import { createPrimGroupKey } from "./common/util.mjs"
 
 const pipe = promisify(pipeline)
 
@@ -652,11 +653,25 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
 
       materialMap.forEach((mesh) => {
         let primitives = mesh.listPrimitives();
-        const mergedPrimitive = joinPrimitives(primitives);
+        const map = new Map();
+        // 通过将primitive按照attr等再次分开合批
+        primitives.forEach((primitive) => {
+          const key = createPrimGroupKey(primitive);
+          const exists = map.get(key);
 
-        mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
-        primitives.forEach(p => p.dispose());
-        mesh.addPrimitive(mergedPrimitive);
+          if (exists) {
+            exists.push(primitive)
+          } else {
+            map.set(key, [primitive])
+          }
+        })
+        map.forEach((primitives, _key) => {
+          const mergedPrimitive = joinPrimitives(primitives);
+
+          mergedPrimitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeatures.createFeatures(primitives.length, 0));
+          primitives.forEach(p => p.dispose());
+          mesh.addPrimitive(mergedPrimitive);
+        })
         scene.addChild(
           newDocument.createNode()
             // .setExtras(node.getExtras())
