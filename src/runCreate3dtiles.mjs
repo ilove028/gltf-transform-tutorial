@@ -11,7 +11,7 @@ import { KHRTextureTransform } from '@gltf-transform/extensions';
 import createGlft from './runCreateGltf.mjs'
 // import { version } from "../package.json";
 // TODO 这里ES6引用json会报错
-const version = "1.5.0";
+const version = "1.6.0";
 const { mat4: { create, multiply, invert, getTranslation } } = glMatrix;
 const getRootExtrasMatrix = (document) => {
   const extras = document.getRoot().getExtras();
