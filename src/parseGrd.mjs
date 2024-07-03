@@ -2,6 +2,7 @@ import { Accessor, Document, NodeIO } from "@gltf-transform/core";
 import { center, transformMesh } from "@gltf-transform/functions";
 import fse from "fs-extra";
 import path from "path";
+import fs from "fs";
 import { dracoMeshCompression, optimize } from "./runCreateGltf.mjs"
 import { createTileSet } from "./common/index.mjs";
 import { GLB_RE, GLTF_RE } from "./constant.mjs";
@@ -88,8 +89,40 @@ function findMinAndMax(values = [], min = Infinity, max = Infinity) {
 
   return { min, max }
 }
+
+/**
+ * 
+ * @param {string} path
+ * @returns {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>}
+ */
+function readData(filePath) {
+  let data = [];
+
+  if (fs.statSync(filePath).isFile()) {
+    data = JSON.parse(fse.readFileSync(filePath, { encoding: "utf-8" }))
+  } else {
+    const files = fs.readdirSync(filePath);
+
+    for (let i = 0; i < files.length; i++) {
+      data = data.concat(readData(path.join(filePath, files[i])));
+    }
+  }
+
+  return data;
+}
 /**
  * 处理Grd处理后的JSON文件生成gltf attributes里面key为标准GLTF attributename
+ * config 参照
+  {
+    "meshBox": [],
+    "input": [
+      "./public/ocean/tilegrd/2024-3-7.json"
+    ],
+    "output": "./public/3dtiles/04010102100000000000000000000000",
+    "extension": "glb",
+    "maxVertexCount": 500000,
+    "isCreateGlft": true
+  }
  * @param {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>} datas 
  */
 async function parseGrd(pt) {
@@ -108,8 +141,8 @@ async function parseGrd(pt) {
   /**
    * @type {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>}
    */
-  const datas = JSON.parse(fse.readFileSync(input[0], { encoding: "utf-8" }))
-
+  // const datas = JSON.parse(fse.readFileSync(input[0], { encoding: "utf-8" }))
+  const datas = readData(input[0])
 
   const document = new Document();
   const scene = document.createScene();
@@ -155,7 +188,9 @@ async function parseGrd(pt) {
           document.createMesh()
             .addPrimitive(primitive)
         )
-    )
+    );
+
+    datas[index] = null;
   });
 
 
