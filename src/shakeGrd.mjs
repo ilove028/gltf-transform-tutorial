@@ -167,8 +167,8 @@ const split = async (filepath, res, splitSize = { x: 1000, y: 1000 }, INVALID = 
   for (let i = 0; i < splitX; i++) {
     for (let j = 0; j < splitY; j++) {
       const start = {
-        x: splitSize.x * i - (i > 0 ? 1 : 0),
-        y: splitSize.y * j - (j > 0 ? 1 : 0)
+        x: (splitSize.x - 1) * i,
+        y: (splitSize.y - 1) * j
       }
       const end = {
         x: start.x + splitSize.x - 1,
