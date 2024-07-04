@@ -215,7 +215,7 @@ async function parseGrd(pt) {
     }
   });
 
-  await optimize(document, io, { output: metadaPath })
+  await optimize(document, io, { output: metadaPath, disableMerge: true })
 
   // await document.transform(
   //   center()

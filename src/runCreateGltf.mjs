@@ -62,7 +62,7 @@ const meshoptCompression = async (io, document) => {
  * 对Gltf进行优化 合批 裁剪
  * @param {import("@gltf-transform/core").Document} document 
  * @param {import("@gltf-transform/core").NodeIO} io 
- * @param {{ output: string }} options
+ * @param {{ output: string, disableMerge: boolean }} options
  * @returns {import("@gltf-transform/core").Document}
  */
 const optimize = async (document, io, options = {}) => {
@@ -82,7 +82,7 @@ const optimize = async (document, io, options = {}) => {
       if (options.output) {
         fse.writeJSONSync(path.join(options.output, "metadata.json"), metadata)
       }
-    }),
+    }, options.disableMerge),
     prune()
   );
 

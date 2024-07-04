@@ -7,11 +7,11 @@ import { VertexAttributeSemantic } from "../constant.mjs";
 import { getBounds } from "../getBounds.mjs";
 import { getBboxBox } from "../utils.mjs"
 /**
- * 
+ * disableMerge 为了海床不合批 合批海床数据会乱
  * @param {import("@gltf-transform/core").NodeIO} io 
  * @returns 
  */
-function mergePrimitives(io, cb) {
+function mergePrimitives(io, cb, disableMerge = false) {
   /**
    * @param {import("@gltf-transform/core").Document} document 
    */
@@ -71,7 +71,7 @@ function mergePrimitives(io, cb) {
           );
           if (!isInAnimationPath(nodes[nodes.length - 1], animationNodes) && !hasSkinAttribute(primitive)) {
             // 非动画节点
-            const key = createPrimGroupKey(primitive)
+            const key = disableMerge ? Math.random().toString(16).slice(2) : createPrimGroupKey(primitive)
             const primitives = mergeMap.get(key)
             if (primitives) {
               primitives.push(primitive)
