@@ -191,8 +191,11 @@ const split = async (filepath, res, splitSize = { x: 1000, y: 1000 }, INVALID = 
             max: (xMinMax.max - xMinMax.min) / (size.x - 1) * end.x + xMinMax.min
           },
           {
-            min: (yMinMax.max - yMinMax.min) / (size.y - 1) * start.y + yMinMax.min,
-            max: (yMinMax.max - yMinMax.min) / (size.y - 1) * end.y + yMinMax.min
+            // min: (yMinMax.max - yMinMax.min) / (size.y - 1) * start.y + yMinMax.min,
+            // max: (yMinMax.max - yMinMax.min) / (size.y - 1) * end.y + yMinMax.min
+            // y轴方向上大下小
+            min: yMinMax.max - (yMinMax.max - yMinMax.min) / (size.y - 1) * end.y,
+            max: yMinMax.max - (yMinMax.max - yMinMax.min) / (size.y - 1) * start.y
           },
           minMax,
           points,
