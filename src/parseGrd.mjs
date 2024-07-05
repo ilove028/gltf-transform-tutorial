@@ -93,10 +93,16 @@ function findMinAndMax(values = [], min = Infinity, max = Infinity) {
 /**
  * 
  * @param {string} path
- * @returns {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>}
+ * @returns {{ res: Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>, zMinMax: { min: number; max: number } }}
  */
 function readData(filePath) {
-  let data = [];
+  let data = {
+    res: [],
+    zMinMax: {
+      min: Infinity,
+      max: -Infinity
+    }
+  };
 
   if (fs.statSync(filePath).isFile()) {
     data = JSON.parse(fse.readFileSync(filePath, { encoding: "utf-8" }))
@@ -104,7 +110,18 @@ function readData(filePath) {
     const files = fs.readdirSync(filePath);
 
     for (let i = 0; i < files.length; i++) {
-      data = data.concat(readData(path.join(filePath, files[i])));
+      const { res, zMinMax } = readData(path.join(filePath, files[i]));
+
+      data.res = data.res.concat(res);
+
+      if (zMinMax) {
+        if (data.zMinMax.min > zMinMax.min) {
+          data.zMinMax.min = zMinMax.min;
+        }
+        if (data.zMinMax.max < zMinMax.max) {
+          data.zMinMax.max = zMinMax.max;
+        }
+      }
     }
   }
 
@@ -142,21 +159,32 @@ async function parseGrd(pt) {
    * @type {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>}
    */
   // const datas = JSON.parse(fse.readFileSync(input[0], { encoding: "utf-8" }))
-  const datas = readData(input[0])
+  const { res: datas, zMinMax } = readData(input[0])
 
   const document = new Document();
   const scene = document.createScene();
   const buffer = document.createBuffer();
   const material = document.createMaterial()
     .setBaseColorFactor([1, 1, 1, 1]);
-  let min = Infinity;
-  let max = -Infinity;
+  let min = zMinMax.min;
+  let max = zMinMax.max;
 
   document.getRoot().setDefaultScene(scene);
 
   datas.forEach((data, index) => {
+    const { zMinMax } = data;
     const primitive = document.createPrimitive()
       .setMaterial(material);
+
+    if (zMinMax) {
+      if (min > zMinMax.min) {
+        min = zMinMax.min
+      }
+
+      if (max < zMinMax.max) {
+        max = zMinMax.max
+      }
+    }
 
     primitive.setIndices(
       document.createAccessor()
@@ -166,13 +194,13 @@ async function parseGrd(pt) {
     )
     Object.entries(data.attributes).forEach(([key, item]) => {
       const TypeCtr = componentDatatype2TypeCtr(item.componentDatatype)
-      
-      if (/HEIGHT/i.test(key)) {
-        const res = findMinAndMax(item.values, min, max);
+      // 因为三角化有可能极值点会被去除不从高度计算
+      // if (/HEIGHT/i.test(key)) {
+      //   const res = findMinAndMax(item.values, min, max);
 
-        min = res.min;
-        max = res.max;
-      }
+      //   min = res.min;
+      //   max = res.max;
+      // }
       primitive.setAttribute(
         key,
         document.createAccessor()
