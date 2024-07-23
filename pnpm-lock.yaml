@@ -12,6 +12,7 @@ specifiers:
   express: ^4.18.2
   fs-extra: ^11.1.1
   gl-matrix: ^3.4.3
+  maxrects-packer: ^2.7.3
   meshoptimizer: ^0.19.0
   node-sql-parser: ^4.9.0
   sequelize: ^6.32.1
@@ -29,6 +30,7 @@ dependencies:
   express: 4.18.2
   fs-extra: 11.1.1
   gl-matrix: 3.4.3
+  maxrects-packer: 2.7.3
   meshoptimizer: 0.19.0
   node-sql-parser: 4.11.0
   sequelize: 6.33.0_sqlite3@5.1.6
@@ -1175,6 +1177,10 @@ packages:
       - supports-color
     dev: false
     optional: true
+
+  /maxrects-packer/2.7.3:
+    resolution: {integrity: sha512-bG6qXujJ1QgttZVIH4WDanhoJtvbud/xP/XPyf6A69C9RdA61BM4TomFALCq2nrTa+tARRIBB4LuIFsnUQU2wA==}
+    dev: false
 
   /media-typer/0.3.0:
     resolution: {integrity: sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==}
