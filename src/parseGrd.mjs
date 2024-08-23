@@ -128,13 +128,13 @@ function readData(filePath) {
   return data;
 }
 /**
- * 使用Cesium GrdPointCloud.html
+ * 使用Cesium feature-118 GrdPointCloud2.html
  * 处理Grd处理后的JSON文件生成gltf attributes里面key为标准GLTF attributename
  * config 参照
   {
     "meshBox": [],
     "input": [
-      "./public/ocean/tilegrd/2024-3-7.json"
+      "./public/ocean/tilegrd"
     ],
     "output": "./public/3dtiles/04010102100000000000000000000000",
     "extension": "glb",
