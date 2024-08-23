@@ -1,5 +1,5 @@
 import { Accessor, Document, NodeIO } from "@gltf-transform/core";
-import { center, transformMesh } from "@gltf-transform/functions";
+import { transformMesh } from "@gltf-transform/functions";
 import fse from "fs-extra";
 import path from "path";
 import fs from "fs";
@@ -8,8 +8,8 @@ import { createTileSet } from "./common/index.mjs";
 import { GLB_RE, GLTF_RE } from "./constant.mjs";
 import { writeFile } from "fs/promises";
 import { compress, rename } from "./utils.mjs"
-import { getBounds } from "./getBounds.mjs";
 import glMatrix from "gl-matrix";
+import { getBounds } from "./getBounds.mjs";
 
 const { mat4: { fromTranslation } } = glMatrix;
 
@@ -98,6 +98,7 @@ function findMinAndMax(values = [], min = Infinity, max = Infinity) {
 function readData(filePath) {
   let data = {
     res: [],
+    zMinMaxList: [],
     zMinMax: {
       min: Infinity,
       max: -Infinity
@@ -113,7 +114,7 @@ function readData(filePath) {
       const { res, zMinMax } = readData(path.join(filePath, files[i]));
 
       data.res = data.res.concat(res);
-
+      data.zMinMaxList.push(zMinMax);
       if (zMinMax) {
         if (data.zMinMax.min > zMinMax.min) {
           data.zMinMax.min = zMinMax.min;
@@ -160,8 +161,8 @@ async function parseGrd(pt) {
    * @type {Array<{indices: Array<number>; attributes: Record<string, { componentDatatype: number; componentsPerAttribute: number; values: Array<number> }> }>}
    */
   // const datas = JSON.parse(fse.readFileSync(input[0], { encoding: "utf-8" }))
-  const { res: datas, zMinMax } = readData(input[0])
-
+  const { res: datas, zMinMax, zMinMaxList: heightMinMaxList } = readData(input[0])
+  const bounds = [];
   const document = new Document();
   const scene = document.createScene();
   const buffer = document.createBuffer();
@@ -211,13 +212,13 @@ async function parseGrd(pt) {
       )
     })
 
-    scene.addChild(
-      document.createNode(`${index}`)
-        .setMesh(
-          document.createMesh()
-            .addPrimitive(primitive)
-        )
-    );
+    const node = document.createNode(`${index}`)
+      .setMesh(
+        document.createMesh()
+          .addPrimitive(primitive)
+      )
+    bounds.push(getBounds(node))
+    scene.addChild(node);
 
     datas[index] = null;
   });
@@ -257,7 +258,7 @@ async function parseGrd(pt) {
     fse.ensureDir(output)
     const tileset = createTileSet(document, needRename ? /gltf/i.test(extension) ? GLTF_RE : GLB_RE : extension)
 
-    tileset.extras = { minHeight: min, maxHeight: max, matrix: fromTranslation([], center) }
+    tileset.extras = { minHeight: min, maxHeight: max, matrix: fromTranslation([], center), heightMinMaxList, bounds }
     await writeFile(path.join(output, "root.json"), JSON.stringify(tileset, null, 2));
   }
   if (toTileset) {
