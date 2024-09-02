@@ -640,6 +640,62 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                   // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
                   // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
                   .setDoubleSided(true);
+
+                  const oldNormalTexture = oldMaterial.getNormalTexture();
+
+                  if (oldNormalTexture) {
+                    const normalImage = oldNormalTexture.getImage();
+                    if (normalImage) {
+                      const normalMd5 = md5(normalImage);
+                      const normalUrl = normalMd5 + '.webp';
+                      const normalTexture = newDocument.createTexture(oldNormalTexture.getName())
+                        .setImage(normalImage)
+                        .setURI(normalUrl)
+                      existMaterial.setNormalTexture(normalTexture)
+                      // unity的文件是webp不用转换 解决exe引用sharp文件问题
+                      // await compressTexture(normalTexture, {
+                      //   encoder: sharp,
+                      //   targetFormat: 'webp'
+                      // });
+                      const oldNormalTextureInfo = oldMaterial.getNormalTextureInfo()
+                      const normalTextureInfo = existMaterial.getNormalTextureInfo()
+                      if (oldNormalTextureInfo && normalTextureInfo) {
+                        normalTextureInfo.setMinFilter(oldNormalTextureInfo.getMinFilter())
+                        normalTextureInfo.setMagFilter(oldNormalTextureInfo.getMagFilter())
+                        normalTextureInfo.setWrapS(oldNormalTextureInfo.getWrapS())
+                        normalTextureInfo.setWrapT(oldNormalTextureInfo.getWrapT())
+                        normalTextureInfo.setTexCoord(oldNormalTextureInfo.getTexCoord())
+                      }
+                    }
+                  }
+  
+                  const oldMetallicRoughnessTexture = oldMaterial.getMetallicRoughnessTexture();
+  
+                  if (oldMetallicRoughnessTexture) {
+                    const metallicRoughnessImage = oldMetallicRoughnessTexture.getImage();
+                    if (metallicRoughnessImage) {
+                      const metallicRoughnessMd5 = md5(metallicRoughnessImage);
+                      const metallicRoughnessUrl = metallicRoughnessMd5 + '.webp';
+                      const metallicRoughnessTexture = newDocument.createTexture(oldMetallicRoughnessTexture.getName())
+                        .setImage(metallicRoughnessImage)
+                        .setURI(metallicRoughnessUrl)
+                      
+                      existMaterial.setMetallicRoughnessTexture(metallicRoughnessTexture);
+                      // await compressTexture(metallicRoughnessTexture, {
+                      //   encoder: sharp,
+                      //   targetFormat: 'webp'
+                      // });
+                      const oldMetallicRoughnessInfo = oldMaterial.getMetallicRoughnessTextureInfo()
+                      const metallicRoughnessInfo = existMaterial.getMetallicRoughnessTextureInfo()
+                      if (oldMetallicRoughnessInfo && metallicRoughnessInfo) {
+                        metallicRoughnessInfo.setMinFilter(oldMetallicRoughnessInfo.getMinFilter())
+                        metallicRoughnessInfo.setMagFilter(oldMetallicRoughnessInfo.getMagFilter())
+                        metallicRoughnessInfo.setWrapS(oldMetallicRoughnessInfo.getWrapS())
+                        metallicRoughnessInfo.setWrapT(oldMetallicRoughnessInfo.getWrapT())
+                        metallicRoughnessInfo.setTexCoord(oldMetallicRoughnessInfo.getTexCoord())
+                      }
+                    }
+                  }
               }
               existMesh = newDocument.createMesh();
               materialMap.set(existMaterial, existMesh);
