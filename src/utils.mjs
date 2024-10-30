@@ -581,6 +581,15 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                       normalTextureInfo.setWrapS(oldNormalTextureInfo.getWrapS())
                       normalTextureInfo.setWrapT(oldNormalTextureInfo.getWrapT())
                       normalTextureInfo.setTexCoord(oldNormalTextureInfo.getTexCoord())
+                      //贴图重复值不为1时
+                      const scale = oldNormalTextureInfo.getExtension('KHR_texture_transform');
+                      if (scale) {
+                        const transformExtension = newDocument.createExtension(KHRTextureTransform)
+                          .setRequired(true);
+                        const transform = transformExtension.createTransform()
+                          .setScale(scale.getScale());
+                          normalTextureInfo.setExtension('KHR_texture_transform', transform);
+                      }
                     }
                   }
                 }
@@ -665,6 +674,15 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                         normalTextureInfo.setWrapS(oldNormalTextureInfo.getWrapS())
                         normalTextureInfo.setWrapT(oldNormalTextureInfo.getWrapT())
                         normalTextureInfo.setTexCoord(oldNormalTextureInfo.getTexCoord())
+                        //贴图重复值不为1时
+                        const scale = oldNormalTextureInfo.getExtension('KHR_texture_transform');
+                        if (scale) {
+                          const transformExtension = newDocument.createExtension(KHRTextureTransform)
+                            .setRequired(true);
+                          const transform = transformExtension.createTransform()
+                            .setScale(scale.getScale());
+                            normalTextureInfo.setExtension('KHR_texture_transform', transform);
+                        }
                       }
                     }
                   }
