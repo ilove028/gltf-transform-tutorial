@@ -495,7 +495,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
             )
 
             primitive.listSemantics().forEach((semantic) => {
-              if (semantic === VertexAttributeSemantic.POSITION || semantic === VertexAttributeSemantic.NORMAL || semantic === VertexAttributeSemantic.TEXCOORD_0) {
+              if (semantic === VertexAttributeSemantic.POSITION || semantic === VertexAttributeSemantic.NORMAL || /TEXCOORD_/i.test(semantic)) {
                 const oldAccessor = primitive.getAttribute(semantic);
 
                 newPrimitive.setAttribute(
