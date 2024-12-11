@@ -130,6 +130,22 @@ const getNodesMaxBound = (nodes) => {
 
 const getNodesBounds = (nodes) => nodes.map(n => getBounds(n))
 
+/**
+ * 获取Cell所有nodes包含子节点nodes
+ * @param {{ children: [], contents }} cell 
+ */
+const getCellBounds = (cell) => {
+  const nodes = []
+  const run = (cell) => {
+    if (cell.contents) {
+      nodes.push(...cell.contents)
+    }
+    cell.children && cell.children.forEach((c) => run(c))
+  }
+  run(cell)
+  return nodes
+}
+
 const getNodesBound = (nodes) => {
   let bbox = nodes && nodes.length > 0 ? getBounds(nodes[0]) : null;
 
@@ -276,7 +292,8 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
         result.content = {
           uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
         }
-        result.geometricError = getBboxsMaxGeometricError2(getNodesBounds(cell.contents));
+        result.geometricError = getBboxsMaxGeometricError2(getNodesBounds(getCellBounds(cell)));
+        // result.geometricError = getBboxsMaxGeometricError2(cell.bbox);
         if (contentBbox && !useTilesImplicitTiling) {
           result.content.boundingVolume = {
             box: getBboxBox(contentBbox)
