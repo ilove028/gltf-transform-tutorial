@@ -640,6 +640,30 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                   }
                 }
 
+                const oldOcclusionTexture = oldMaterial.getOcclusionTexture();
+  
+                  if (oldOcclusionTexture) {
+                    const occlusionTextureImage = oldOcclusionTexture.getImage();
+                    if (occlusionTextureImage) {
+                      const occlusionTextureMd5 = md5(occlusionTextureImage);
+                      const occlusionTextureUrl = occlusionTextureMd5 + '.webp';
+                      const occlusionTextureTexture = newDocument.createTexture(oldOcclusionTexture.getName())
+                        .setImage(occlusionTextureImage)
+                        .setURI(occlusionTextureUrl)
+                      
+                      existMaterial.setOcclusionTexture(occlusionTextureTexture);
+                      const oldOcclusionTextureInfo = oldMaterial.getOcclusionTextureInfo()
+                      const occlusionTextureInfo = existMaterial.getOcclusionTextureInfo()
+                      if (oldOcclusionTextureInfo && occlusionTextureInfo) {
+                        occlusionTextureInfo.setMinFilter(oldOcclusionTextureInfo.getMinFilter())
+                        occlusionTextureInfo.setMagFilter(oldOcclusionTextureInfo.getMagFilter())
+                        occlusionTextureInfo.setWrapS(oldOcclusionTextureInfo.getWrapS())
+                        occlusionTextureInfo.setWrapT(oldOcclusionTextureInfo.getWrapT())
+                        occlusionTextureInfo.setTexCoord(oldOcclusionTextureInfo.getTexCoord())
+                      }
+                    }
+                  }
+
                 const textureInfo = existMaterial.getBaseColorTextureInfo(); // 未生效
                 const oldTextureInfo = oldMaterial.getBaseColorTextureInfo();
                 const oldMagFilter = oldTextureInfo && oldTextureInfo.getMagFilter();
@@ -730,6 +754,30 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                         metallicRoughnessInfo.setWrapS(oldMetallicRoughnessInfo.getWrapS())
                         metallicRoughnessInfo.setWrapT(oldMetallicRoughnessInfo.getWrapT())
                         metallicRoughnessInfo.setTexCoord(oldMetallicRoughnessInfo.getTexCoord())
+                      }
+                    }
+                  }
+
+                  const oldOcclusionTexture = oldMaterial.getOcclusionTexture();
+  
+                  if (oldOcclusionTexture) {
+                    const occlusionTextureImage = oldOcclusionTexture.getImage();
+                    if (occlusionTextureImage) {
+                      const occlusionTextureMd5 = md5(occlusionTextureImage);
+                      const occlusionTextureUrl = occlusionTextureMd5 + '.webp';
+                      const occlusionTextureTexture = newDocument.createTexture(oldOcclusionTexture.getName())
+                        .setImage(occlusionTextureImage)
+                        .setURI(occlusionTextureUrl)
+                      
+                      existMaterial.setOcclusionTexture(occlusionTextureTexture);
+                      const oldOcclusionTextureInfo = oldMaterial.getOcclusionTextureInfo()
+                      const occlusionTextureInfo = existMaterial.getOcclusionTextureInfo()
+                      if (oldOcclusionTextureInfo && occlusionTextureInfo) {
+                        occlusionTextureInfo.setMinFilter(oldOcclusionTextureInfo.getMinFilter())
+                        occlusionTextureInfo.setMagFilter(oldOcclusionTextureInfo.getMagFilter())
+                        occlusionTextureInfo.setWrapS(oldOcclusionTextureInfo.getWrapS())
+                        occlusionTextureInfo.setWrapT(oldOcclusionTextureInfo.getWrapT())
+                        occlusionTextureInfo.setTexCoord(oldOcclusionTextureInfo.getTexCoord())
                       }
                     }
                   }
