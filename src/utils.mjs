@@ -502,7 +502,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
             const primitive = primitives[j];
             transformPrimitive(primitive, node.getWorldMatrix());
             const newPrimitive = newDocument.createPrimitive();
-            const oldMaterial = primitive.getMaterial();
+            const oldMaterial = primitive.getMaterial() || document.createMaterial().setBaseColorFactor([1, 1, 1, 1]);
             const indeiceAccessor = primitive.getIndices();
 
             indeiceAccessor && newPrimitive.setIndices(
