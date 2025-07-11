@@ -292,8 +292,8 @@ const create3dtiles = async (cell, extension, useTilesImplicitTiling, path, subt
         result.content = {
           uri: `contents/${cell.level}-${cell.x}-${cell.y}${cell instanceof Cell3 ? `-${cell.z}` : ""}.${extension}`
         }
-        result.geometricError = getBboxsMaxGeometricError2(getNodesBounds(getCellBounds(cell)));
-        // result.geometricError = getBboxsMaxGeometricError2(cell.bbox);
+        // result.geometricError = getBboxsMaxGeometricError2(getNodesBounds(getCellBounds(cell)));
+        result.geometricError = getBboxsMaxGeometricError2(cell.bbox);
         if (contentBbox && !useTilesImplicitTiling) {
           result.content.boundingVolume = {
             box: getBboxBox(contentBbox)
@@ -357,7 +357,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
   }
   const createDocument =async (nodes) => {
     const materialMap = new Map();
-    if (nodes) {
+    if (nodes && nodes.length > 0) {
       const newDocument = new Document();
       const buffer = newDocument.createBuffer();
       const scene = newDocument.createScene()

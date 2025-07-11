@@ -565,7 +565,8 @@ const octree = (document, { maxLevel, maxNodeSize, maxRadius, maxVertexCount, is
     console.log(`Divide ${cell.level}-${cell.x}-${cell.y}-${cell.z}`);
     if (
       nodes
-      && nodes.length > maxNodeSize
+      // 只按照顶点量划分
+      // && nodes.length > maxNodeSize
       && cell.level < maxLevel
       // && distance(cell.bbox.min, cell.bbox.max) > (maxRadius * 2)
       && getNodesVertexCount(nodes) > maxVertexCount

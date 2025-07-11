@@ -8,7 +8,7 @@ import { resolve } from "path";
 
 // compress("./public/3dtiles/GLBFileInfo")
 
-// uncompress("./public/01230100300000000000000000000000");
+uncompress("./public/3dtiles/01020100400000000000000000000000");
 
 // (async () => {
 //   await sharp({
@@ -61,54 +61,54 @@ import { resolve } from "path";
 //     console.log(bin.rects);
 // });
 
-(async() => {
-  const basePath = "./public/01230100300000000000000000000000/contents";
-  const files = await readdir(basePath);
-  const input = [];
+// (async() => {
+//   const basePath = "./public/01230100300000000000000000000000/contents";
+//   const files = await readdir(basePath);
+//   const input = [];
 
-  for (let file of files) {
-    if (/\.webp$/.test(file)) {
-      const imagePath = resolve(basePath, file)
-      const metadata = await sharp(imagePath).metadata();
-      input.push({
-        width: metadata.width,
-        height: metadata.height,
-        name: imagePath
-      });
-    }
-  }
+//   for (let file of files) {
+//     if (/\.webp$/.test(file)) {
+//       const imagePath = resolve(basePath, file)
+//       const metadata = await sharp(imagePath).metadata();
+//       input.push({
+//         width: metadata.width,
+//         height: metadata.height,
+//         name: imagePath
+//       });
+//     }
+//   }
 
-  const width = 1024;
-  const height = 1024;
-  const packer = new MaxRectsPacker(width, height, 0, { allowRotation: false });
-  packer.addArray(input);
+//   const width = 1024;
+//   const height = 1024;
+//   const packer = new MaxRectsPacker(width, height, 0, { allowRotation: false });
+//   packer.addArray(input);
 
-  for (let bin of packer.bins) {
-    if (bin instanceof MaxRectsBin) {
-      const images = [];
-      for (let rect of bin.rects) {
-        images.push({
-          top: rect.y,
-          left: rect.x,
-          input: await sharp(rect.name).toBuffer()
-        })
-      }
+//   for (let bin of packer.bins) {
+//     if (bin instanceof MaxRectsBin) {
+//       const images = [];
+//       for (let rect of bin.rects) {
+//         images.push({
+//           top: rect.y,
+//           left: rect.x,
+//           input: await sharp(rect.name).toBuffer()
+//         })
+//       }
 
-      await sharp({
-        create: {
-          width: bin.width,
-          height: bin.height,
-          channels: 4,
-          background: { r: 0, g: 0, b: 0, alpha: 0 }
-        }
-      })
-      .composite(images)
-      .webp()
-      .toFile(`./public/01230100300000000000000000000000/${Math.random().toString(16).slice(2)}.webp`)
-    } else {
-      for (let rect of bin.rects) {
-        await sharp(rect.name).toFile(`./public/01230100300000000000000000000000/${Math.random().toString(16).slice(2)}.webp`)
-      }
-    }
-  }
-})();
+//       await sharp({
+//         create: {
+//           width: bin.width,
+//           height: bin.height,
+//           channels: 4,
+//           background: { r: 0, g: 0, b: 0, alpha: 0 }
+//         }
+//       })
+//       .composite(images)
+//       .webp()
+//       .toFile(`./public/01230100300000000000000000000000/${Math.random().toString(16).slice(2)}.webp`)
+//     } else {
+//       for (let rect of bin.rects) {
+//         await sharp(rect.name).toFile(`./public/01230100300000000000000000000000/${Math.random().toString(16).slice(2)}.webp`)
+//       }
+//     }
+//   }
+// })();
