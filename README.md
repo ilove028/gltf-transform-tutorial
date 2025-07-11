@@ -1,4 +1,4 @@
-使用这两行命令 要用pnpm安装依赖 要不然 打包出来的js gltf-transform/function还是会引用sharp 报sharp依赖问题
+使用这两行命令 要用pnpm安装依赖 要不然 打包出来的js gltf-transform/function还是会引用sharp 报sharp依赖问题 pkg@5.8.1
 rollup --config rollup.config.mjs
 pkg .\dist\runCreate3dtiles.js -t node16-win --out-path .\bin
 不使用
