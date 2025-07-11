@@ -121,7 +121,8 @@ export default async function ({
   }
 
   const metadaPath = toTileset ? path.join(output, 'metadata') : output
-  fse.ensureDir(metadaPath)
+  await fse.ensureDir(metadaPath)
+
   document = await optimize(document, io, { output: metadaPath })
 
   if (compressType === 'EXT_meshopt_compression') {

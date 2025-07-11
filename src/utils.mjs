@@ -903,7 +903,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
 
   await write(filePath, document, cell);
   const pt = path.join(filePath, "metadata");
-  fse.ensureDir(pt)
+  await fse.ensureDir(pt)
   fse.writeJSONSync(path.join(pt, "metadata.json"), metadataMap)
 }
 
