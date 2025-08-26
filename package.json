@@ -36,5 +36,8 @@
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.0.1"
+  },
+  "engines": {
+    "node": "=18.19.0"
   }
 }
