@@ -7,11 +7,11 @@ import { writeFile, rm } from "fs/promises";
 import path from "path";
 import glMatrix from "gl-matrix";
 import fse from "fs-extra";
-import { KHRTextureTransform } from '@gltf-transform/extensions';
+import { KHRTextureTransform, EXTMeshGPUInstancing } from '@gltf-transform/extensions';
 import createGlft from './runCreateGltf.mjs'
 // import { version } from "../package.json";
 // TODO 这里ES6引用json会报错
-const version = "1.7.5";
+const version = "1.8.0";
 const { mat4: { create, multiply, invert, getTranslation } } = glMatrix;
 const getRootExtrasMatrix = (document) => {
   const extras = document.getRoot().getExtras();
@@ -29,7 +29,7 @@ const run = async ({ input, output, extension = "glb", useTilesImplicitTiling = 
   await rm(output, { recursive: true });
   await fse.ensureDir(output);
   
-  const io = new NodeIO().registerExtensions([KHRTextureTransform]);
+  const io = new NodeIO().registerExtensions([KHRTextureTransform, EXTMeshGPUInstancing]);
   let document;
   let mainMatrix;
   if (Array.isArray(input)) {

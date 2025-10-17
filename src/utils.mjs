@@ -379,9 +379,9 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
             batchExtension = newDocument.createExtension(EXTMeshGPUInstancing).setRequired(true);
           }
           // 如果是实例化不进行合并
-          const { iids, primitiveTypes } = node.getExtras();
+          const { iids, primitiveTypes } = getInstancedExtras(node);
 
-          iids.forEach((iid, index) => {
+          iids && iids.forEach((iid, index) => {
             const primitiveType = primitiveTypes[index];
             metadata.addItem({ iid: iid ? iid : `iid-${guid()}`, primitiveType: typeof primitiveType === "number" ? primitiveType : 4 });
             let exist = metadataMap[iid];
@@ -463,13 +463,15 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
                   .setRoughnessFactor(material.getRoughnessFactor())
                   .setMetallicFactor(material.getMetallicFactor())
                   .setDoubleSided(true)
+                  .setAlphaCutoff(material.getAlphaCutoff())
                   .setAlphaMode(material.getAlphaMode());
               } else {
                 newMaterial
                   .setBaseColorFactor(material.getBaseColorFactor())
                   .setRoughnessFactor(material.getRoughnessFactor())
                   .setMetallicFactor(material.getMetallicFactor())
-                  .setAlphaMode(material.getAlpha() < 1 ? Material.AlphaMode.BLEND : Material.AlphaMode.OPAQUE)
+                  .setAlphaMode(material.getAlphaMode())
+                  .setAlphaCutoff(material.getAlphaCutoff())
                   // 从自定义公司模型来的模型材质没有双面渲染这个属性，只能写死，
                   // 从标准gltf有这个属性直接使用 后期还可以做backfface cull
                   .setDoubleSided(true);
@@ -479,7 +481,7 @@ const create3dtilesContent = async (filePath, document, cell, extension = "glb",
           newNode.setMesh(newMesh)
           scene.addChild(newNode);
           featureId += iids.length;
-        } else {
+        } else if (node.getMesh()) {
           const primitives = node.getMesh().listPrimitives();
           const extras = getExtras(node);
           // 第一步导出会保证有IID没有IID也会随机生成一个 16位字符长度的站场IID，再用-拼接一个随机字符串
@@ -1427,6 +1429,38 @@ const getExtras = (node) => {
   }
 
   return extras;
+}
+/**
+ * @param {import("@gltf-transform/core").Node} node
+ */
+const getInstancedExtras = (node) => {
+  let extras = node.getExtras();
+  if (extras && extras.iids) {
+    return extras;
+  } else {
+    const name = node.getName();
+
+    if (name) {
+      try {
+        extras = {
+          primitiveTypes: [],
+          iids: []
+        };
+        for (let match of name.matchAll(/\((\w+):(.*?)\)/g)) {
+          if (match) {
+            if (match[1] === 'primitiveTypes') {
+              extras[match[1]] = match[2].split(',').map(v => parseInt(v.trim()));
+            } else if (match[1] === 'iids') {
+              extras[match[1]] = match[2].split(',').map(v => v.trim());
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`Parse ${name} error`)
+      }
+    }
+    return extras;
+  }
 }
 
 export {
